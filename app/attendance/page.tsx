@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { getSupabaseClient } from '../lib/supabase';
@@ -25,7 +25,8 @@ type AttendanceRecord = {
   offering: number | null;
 };
 
-export default function AttendancePage() {
+// Content component that uses searchParams
+function AttendanceContent() {
   const searchParams = useSearchParams();
   const memberId = searchParams.get('member');
 
@@ -928,5 +929,14 @@ export default function AttendancePage() {
 
       {/* No additional statistics needed at the bottom */}
     </div>
+  );
+}
+
+// Main component with Suspense boundary
+export default function AttendancePage() {
+  return (
+    <Suspense fallback={<div className="p-4 flex justify-center items-center h-screen">Loading attendance data...</div>}>
+      <AttendanceContent />
+    </Suspense>
   );
 }

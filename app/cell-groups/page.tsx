@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { getSupabaseClient } from '../lib/supabase';
@@ -21,7 +21,8 @@ type CellGroup = {
   member_count?: number;
 };
 
-export default function CellGroupsPage() {
+// Wrapper component to handle search params
+function CellGroupsContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const addMemberId = searchParams.get('add_member');
@@ -292,5 +293,14 @@ export default function CellGroupsPage() {
         </div>
       )}
     </div>
+  );
+}
+
+// Main component with Suspense boundary
+export default function CellGroupsPage() {
+  return (
+    <Suspense fallback={<div className="p-4 flex justify-center items-center h-screen">Loading cell groups...</div>}>
+      <CellGroupsContent />
+    </Suspense>
   );
 }
