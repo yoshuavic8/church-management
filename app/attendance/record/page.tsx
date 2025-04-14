@@ -135,14 +135,14 @@ export default function RecordAttendancePage() {
 
       // Combine and format members data
       const allMemberData = [
-        ...(cellGroupMembers || []).map(item => item.members),
-        ...(cellGroupLeaders || []).map(item => item.members)
+        ...(cellGroupMembers || []).map(item => item.members as Member),
+        ...(cellGroupLeaders || []).map(item => item.members as Member)
       ];
 
       // Remove duplicates (a leader might also be in the members list)
       const uniqueMembers = Array.from(
         new Map(allMemberData.map(item => [item.id, item])).values()
-      );
+      ) as Member[];
 
       // Filter out inactive members
       const activeMembers = uniqueMembers.filter(member => member.status === 'active');
