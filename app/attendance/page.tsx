@@ -100,8 +100,20 @@ export default function AttendancePage() {
           // Calculate total count (all participants)
           const totalCount = (presentCount || 0) + (absentCount || 0) + (lateCount || 0) + (excusedCount || 0);
 
+          // Extract cell group name from the array if it exists
+          const cellGroupData = Array.isArray(meeting.cell_group) && meeting.cell_group.length > 0
+            ? { name: meeting.cell_group[0]?.name || 'Unknown' }
+            : { name: 'Unknown' };
+
           return {
-            ...meeting,
+            id: meeting.id,
+            meeting_date: meeting.meeting_date,
+            meeting_type: meeting.meeting_type,
+            topic: meeting.topic,
+            notes: meeting.notes,
+            offering: meeting.offering,
+            cell_group_id: meeting.cell_group_id,
+            cell_group: cellGroupData,
             present_count: presentCount || 0,
             absent_count: absentCount || 0,
             late_count: lateCount || 0,
