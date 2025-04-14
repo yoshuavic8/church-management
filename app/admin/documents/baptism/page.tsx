@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { supabase } from '../../../lib/supabase';
+import { getSupabaseClient } from '../../../lib/supabase';
 
 type Member = {
   id: string;
@@ -25,13 +25,14 @@ export default function BaptismCertificatePage() {
       try {
         // In a real implementation, this would be an actual Supabase query
         // Example:
+        // const supabase = getSupabaseClient();
         // const { data, error } = await supabase
         //   .from('members')
         //   .select('id, first_name, last_name, baptism_date')
         //   .order('last_name', { ascending: true });
-        
+
         // if (error) throw error;
-        
+
         // Placeholder data
         const mockMembers: Member[] = [
           {
@@ -53,7 +54,7 @@ export default function BaptismCertificatePage() {
             baptism_date: '2022-11-05',
           },
         ];
-        
+
         setMembers(mockMembers);
       } catch (error) {
         console.error('Error fetching members:', error);
@@ -68,7 +69,7 @@ export default function BaptismCertificatePage() {
   const handleMemberChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const memberId = e.target.value;
     setSelectedMember(memberId);
-    
+
     if (memberId) {
       const member = members.find(m => m.id === memberId);
       if (member && member.baptism_date) {
@@ -79,19 +80,20 @@ export default function BaptismCertificatePage() {
 
   const handleGenerateCertificate = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!selectedMember || !baptismDate || !officiant) {
       alert('Please fill in all required fields');
       return;
     }
-    
+
     setGenerating(true);
-    
+
     try {
       // In a real implementation, this would generate a PDF using jsPDF
       // and save a record in the database
-      
+
       // Example:
+      // const supabase = getSupabaseClient();
       // const { error } = await supabase
       //   .from('documents')
       //   .insert({
@@ -104,12 +106,12 @@ export default function BaptismCertificatePage() {
       //       officiant: officiant
       //     }
       //   });
-      
+
       // if (error) throw error;
-      
+
       // For now, we'll just simulate a delay
       await new Promise(resolve => setTimeout(resolve, 1500));
-      
+
       alert('Baptism certificate generated successfully!');
       router.push('/admin');
     } catch (error) {
@@ -123,7 +125,7 @@ export default function BaptismCertificatePage() {
   return (
     <div>
       <h1 className="text-3xl font-bold mb-6">Generate Baptism Certificate</h1>
-      
+
       <div className="card">
         <form onSubmit={handleGenerateCertificate} className="space-y-6">
           <div>
@@ -145,7 +147,7 @@ export default function BaptismCertificatePage() {
               ))}
             </select>
           </div>
-          
+
           <div>
             <label htmlFor="baptism_date" className="block text-sm font-medium text-gray-700 mb-1">
               Baptism Date *
@@ -159,7 +161,7 @@ export default function BaptismCertificatePage() {
               required
             />
           </div>
-          
+
           <div>
             <label htmlFor="officiant" className="block text-sm font-medium text-gray-700 mb-1">
               Officiant (Pastor) *
@@ -174,7 +176,7 @@ export default function BaptismCertificatePage() {
               required
             />
           </div>
-          
+
           <div className="flex justify-end space-x-3">
             <button
               type="button"
@@ -193,7 +195,7 @@ export default function BaptismCertificatePage() {
           </div>
         </form>
       </div>
-      
+
       <div className="mt-8">
         <h2 className="text-xl font-semibold mb-4">Preview</h2>
         <div className="border rounded-lg p-8 bg-white">

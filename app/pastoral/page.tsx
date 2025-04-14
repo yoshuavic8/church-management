@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { supabase } from '../lib/supabase';
+import { getSupabaseClient } from '../lib/supabase';
 
 type PastoralService = {
   id: string;
@@ -26,13 +26,14 @@ export default function PastoralServicesPage() {
       try {
         // In a real implementation, this would be an actual Supabase query
         // Example:
+        // const supabase = getSupabaseClient();
         // const { data, error } = await supabase
         //   .from('pastoral_services')
         //   .select('*, members(first_name, last_name)')
         //   .order('requested_date', { ascending: false });
-        
+
         // if (error) throw error;
-        
+
         // Placeholder data
         const mockServices: PastoralService[] = [
           {
@@ -91,7 +92,7 @@ export default function PastoralServicesPage() {
             assigned_to: '',
           },
         ];
-        
+
         setServices(mockServices);
       } catch (error) {
         console.error('Error fetching pastoral services:', error);
@@ -174,14 +175,14 @@ export default function PastoralServicesPage() {
           New Service Request
         </Link>
       </div>
-      
+
       <div className="card mb-6">
         <div className="flex flex-wrap gap-2">
           <button
             onClick={() => setFilter('all')}
             className={`px-3 py-1 rounded-md ${
-              filter === 'all' 
-                ? 'bg-primary text-white' 
+              filter === 'all'
+                ? 'bg-primary text-white'
                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
             }`}
           >
@@ -190,8 +191,8 @@ export default function PastoralServicesPage() {
           <button
             onClick={() => setFilter('pending')}
             className={`px-3 py-1 rounded-md ${
-              filter === 'pending' 
-                ? 'bg-primary text-white' 
+              filter === 'pending'
+                ? 'bg-primary text-white'
                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
             }`}
           >
@@ -200,8 +201,8 @@ export default function PastoralServicesPage() {
           <button
             onClick={() => setFilter('scheduled')}
             className={`px-3 py-1 rounded-md ${
-              filter === 'scheduled' 
-                ? 'bg-primary text-white' 
+              filter === 'scheduled'
+                ? 'bg-primary text-white'
                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
             }`}
           >
@@ -210,8 +211,8 @@ export default function PastoralServicesPage() {
           <button
             onClick={() => setFilter('completed')}
             className={`px-3 py-1 rounded-md ${
-              filter === 'completed' 
-                ? 'bg-primary text-white' 
+              filter === 'completed'
+                ? 'bg-primary text-white'
                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
             }`}
           >
@@ -220,8 +221,8 @@ export default function PastoralServicesPage() {
           <button
             onClick={() => setFilter('visitation')}
             className={`px-3 py-1 rounded-md ${
-              filter === 'visitation' 
-                ? 'bg-primary text-white' 
+              filter === 'visitation'
+                ? 'bg-primary text-white'
                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
             }`}
           >
@@ -230,8 +231,8 @@ export default function PastoralServicesPage() {
           <button
             onClick={() => setFilter('counseling')}
             className={`px-3 py-1 rounded-md ${
-              filter === 'counseling' 
-                ? 'bg-primary text-white' 
+              filter === 'counseling'
+                ? 'bg-primary text-white'
                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
             }`}
           >
@@ -240,8 +241,8 @@ export default function PastoralServicesPage() {
           <button
             onClick={() => setFilter('baptism')}
             className={`px-3 py-1 rounded-md ${
-              filter === 'baptism' 
-                ? 'bg-primary text-white' 
+              filter === 'baptism'
+                ? 'bg-primary text-white'
                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
             }`}
           >
@@ -250,8 +251,8 @@ export default function PastoralServicesPage() {
           <button
             onClick={() => setFilter('wedding')}
             className={`px-3 py-1 rounded-md ${
-              filter === 'wedding' 
-                ? 'bg-primary text-white' 
+              filter === 'wedding'
+                ? 'bg-primary text-white'
                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
             }`}
           >
@@ -260,8 +261,8 @@ export default function PastoralServicesPage() {
           <button
             onClick={() => setFilter('funeral')}
             className={`px-3 py-1 rounded-md ${
-              filter === 'funeral' 
-                ? 'bg-primary text-white' 
+              filter === 'funeral'
+                ? 'bg-primary text-white'
                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
             }`}
           >
@@ -269,7 +270,7 @@ export default function PastoralServicesPage() {
           </button>
         </div>
       </div>
-      
+
       {loading ? (
         <div className="flex justify-center items-center h-64">
           <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
@@ -282,7 +283,7 @@ export default function PastoralServicesPage() {
                 <div className="mr-4 p-3 bg-primary/10 text-primary rounded-full">
                   {getServiceTypeIcon(service.type)}
                 </div>
-                
+
                 <div className="flex-1">
                   <div className="flex justify-between items-start">
                     <div>
@@ -295,28 +296,28 @@ export default function PastoralServicesPage() {
                         </Link>
                       </p>
                     </div>
-                    
+
                     <span className={`px-2 py-1 rounded-full text-xs ${getStatusBadgeClass(service.status)}`}>
                       {service.status.charAt(0).toUpperCase() + service.status.slice(1)}
                     </span>
                   </div>
-                  
+
                   <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-2">
                     <div>
                       <p className="text-sm text-gray-500">Requested Date</p>
                       <p>{new Date(service.requested_date).toLocaleDateString()}</p>
                     </div>
-                    
+
                     <div>
                       <p className="text-sm text-gray-500">Scheduled Date</p>
                       <p>{service.scheduled_date ? new Date(service.scheduled_date).toLocaleDateString() : 'Not scheduled'}</p>
                     </div>
-                    
+
                     <div className="md:col-span-2">
                       <p className="text-sm text-gray-500">Assigned To</p>
                       <p>{service.assigned_to || 'Not assigned'}</p>
                     </div>
-                    
+
                     {service.notes && (
                       <div className="md:col-span-2">
                         <p className="text-sm text-gray-500">Notes</p>
@@ -324,7 +325,7 @@ export default function PastoralServicesPage() {
                       </div>
                     )}
                   </div>
-                  
+
                   <div className="mt-4 flex justify-end">
                     <Link href={`/pastoral/${service.id}`} className="text-primary hover:underline">
                       View Details
@@ -334,7 +335,7 @@ export default function PastoralServicesPage() {
               </div>
             </div>
           ))}
-          
+
           {filteredServices.length === 0 && (
             <div className="text-center py-8 text-gray-500">
               No pastoral services found matching the selected filter

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { supabase } from '../lib/supabase';
+import { getSupabaseClient } from '../lib/supabase';
 
 type Class = {
   id: string;
@@ -29,13 +29,14 @@ export default function ClassesPage() {
       try {
         // In a real implementation, this would be an actual Supabase query
         // Example:
+        // const supabase = getSupabaseClient();
         // const { data, error } = await supabase
         //   .from('classes')
         //   .select('*')
         //   .order('start_date', { ascending: false });
-        
+
         // if (error) throw error;
-        
+
         // Placeholder data
         const mockClasses: Class[] = [
           {
@@ -81,7 +82,7 @@ export default function ClassesPage() {
             type: 'discipleship',
           },
         ];
-        
+
         setClasses(mockClasses);
       } catch (error) {
         console.error('Error fetching classes:', error);
@@ -110,14 +111,14 @@ export default function ClassesPage() {
           Add New Class
         </Link>
       </div>
-      
+
       <div className="card mb-6">
         <div className="flex flex-wrap gap-2">
           <button
             onClick={() => setFilter('all')}
             className={`px-3 py-1 rounded-md ${
-              filter === 'all' 
-                ? 'bg-primary text-white' 
+              filter === 'all'
+                ? 'bg-primary text-white'
                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
             }`}
           >
@@ -126,8 +127,8 @@ export default function ClassesPage() {
           <button
             onClick={() => setFilter('active')}
             className={`px-3 py-1 rounded-md ${
-              filter === 'active' 
-                ? 'bg-primary text-white' 
+              filter === 'active'
+                ? 'bg-primary text-white'
                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
             }`}
           >
@@ -136,8 +137,8 @@ export default function ClassesPage() {
           <button
             onClick={() => setFilter('upcoming')}
             className={`px-3 py-1 rounded-md ${
-              filter === 'upcoming' 
-                ? 'bg-primary text-white' 
+              filter === 'upcoming'
+                ? 'bg-primary text-white'
                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
             }`}
           >
@@ -146,8 +147,8 @@ export default function ClassesPage() {
           <button
             onClick={() => setFilter('completed')}
             className={`px-3 py-1 rounded-md ${
-              filter === 'completed' 
-                ? 'bg-primary text-white' 
+              filter === 'completed'
+                ? 'bg-primary text-white'
                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
             }`}
           >
@@ -156,8 +157,8 @@ export default function ClassesPage() {
           <button
             onClick={() => setFilter('bible_study')}
             className={`px-3 py-1 rounded-md ${
-              filter === 'bible_study' 
-                ? 'bg-primary text-white' 
+              filter === 'bible_study'
+                ? 'bg-primary text-white'
                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
             }`}
           >
@@ -166,8 +167,8 @@ export default function ClassesPage() {
           <button
             onClick={() => setFilter('counseling')}
             className={`px-3 py-1 rounded-md ${
-              filter === 'counseling' 
-                ? 'bg-primary text-white' 
+              filter === 'counseling'
+                ? 'bg-primary text-white'
                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
             }`}
           >
@@ -176,8 +177,8 @@ export default function ClassesPage() {
           <button
             onClick={() => setFilter('discipleship')}
             className={`px-3 py-1 rounded-md ${
-              filter === 'discipleship' 
-                ? 'bg-primary text-white' 
+              filter === 'discipleship'
+                ? 'bg-primary text-white'
                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
             }`}
           >
@@ -185,7 +186,7 @@ export default function ClassesPage() {
           </button>
         </div>
       </div>
-      
+
       {loading ? (
         <div className="flex justify-center items-center h-64">
           <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
@@ -197,8 +198,8 @@ export default function ClassesPage() {
               <div className="flex justify-between items-start">
                 <h2 className="text-xl font-semibold">{cls.name}</h2>
                 <span className={`px-2 py-1 rounded-full text-xs ${
-                  cls.status === 'active' 
-                    ? 'bg-green-100 text-green-800' 
+                  cls.status === 'active'
+                    ? 'bg-green-100 text-green-800'
                     : cls.status === 'completed'
                     ? 'bg-gray-100 text-gray-800'
                     : 'bg-blue-100 text-blue-800'
@@ -206,9 +207,9 @@ export default function ClassesPage() {
                   {cls.status.charAt(0).toUpperCase() + cls.status.slice(1)}
                 </span>
               </div>
-              
+
               <p className="text-gray-600 mt-2">{cls.description}</p>
-              
+
               <div className="mt-4 space-y-2">
                 <div className="flex items-center text-gray-600">
                   <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -216,7 +217,7 @@ export default function ClassesPage() {
                   </svg>
                   <span>{cls.meeting_day}s at {cls.meeting_time}</span>
                 </div>
-                
+
                 <div className="flex items-center text-gray-600">
                   <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
@@ -224,21 +225,21 @@ export default function ClassesPage() {
                   </svg>
                   <span>{cls.location}</span>
                 </div>
-                
+
                 <div className="flex items-center text-gray-600">
                   <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
                   </svg>
                   <span>{cls.instructor_name}</span>
                 </div>
-                
+
                 <div className="flex items-center text-gray-600">
                   <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path>
                   </svg>
                   <span>{cls.student_count} students</span>
                 </div>
-                
+
                 <div className="flex items-center text-gray-600">
                   <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
@@ -248,7 +249,7 @@ export default function ClassesPage() {
                   </span>
                 </div>
               </div>
-              
+
               <div className="mt-6 flex justify-end">
                 <Link href={`/classes/${cls.id}`} className="text-primary hover:underline">
                   View Details
@@ -256,7 +257,7 @@ export default function ClassesPage() {
               </div>
             </div>
           ))}
-          
+
           {filteredClasses.length === 0 && (
             <div className="col-span-full text-center py-8 text-gray-500">
               No classes found matching the selected filter
