@@ -133,10 +133,20 @@ export default function RecordAttendancePage() {
 
       if (leadersError) throw leadersError;
 
-      // Combine and format members data
+      // Combine and format members data - fix the type issue
       const allMemberData = [
-        ...(cellGroupMembers || []).map(item => item.members as Member),
-        ...(cellGroupLeaders || []).map(item => item.members as Member)
+        ...(cellGroupMembers || []).map(item => ({
+          id: item.members.id,
+          first_name: item.members.first_name,
+          last_name: item.members.last_name,
+          status: item.members.status
+        } as Member)),
+        ...(cellGroupLeaders || []).map(item => ({
+          id: item.members.id,
+          first_name: item.members.first_name,
+          last_name: item.members.last_name,
+          status: item.members.status
+        } as Member))
       ];
 
       // Remove duplicates (a leader might also be in the members list)
