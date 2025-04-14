@@ -117,8 +117,6 @@ export default function RecordAttendancePage() {
 
       if (membersError) throw membersError;
 
-      console.log('Cell Group Members:', JSON.stringify(cellGroupMembers, null, 2));
-
       // Also get leaders of this cell group
       const { data: cellGroupLeaders, error: leadersError } = await supabase
         .from('cell_group_leaders')
@@ -134,8 +132,6 @@ export default function RecordAttendancePage() {
         .eq('cell_group_id', cellGroupId);
 
       if (leadersError) throw leadersError;
-
-      console.log('Cell Group Leaders:', JSON.stringify(cellGroupLeaders, null, 2));
 
       // Combine and format members data - fix the type issue
       const allMemberData = [
