@@ -92,8 +92,19 @@ export default function CellGroupDetailPage() {
 
         if (leadersError) throw leadersError;
 
-        // Extract member data from the nested structure
-        const processedLeaders = leadersData?.map(item => item.members) || [];
+        // Extract and process member data from the nested structure
+        const processedLeaders = (leadersData || []).map(item => {
+          // Handle if item.members is an array or an object
+          const memberData = Array.isArray(item.members) ? item.members[0] : item.members;
+          return {
+            id: memberData.id,
+            first_name: memberData.first_name,
+            last_name: memberData.last_name,
+            email: memberData.email,
+            phone: memberData.phone
+          } as Leader;
+        });
+
         setLeaders(processedLeaders);
 
         // Fetch members (excluding leaders)
@@ -111,8 +122,16 @@ export default function CellGroupDetailPage() {
 
         if (membersError) throw membersError;
 
-        // Extract member data from the nested structure
-        const processedMembers = membersData?.map(item => item.members) || [];
+        // Extract and process member data from the nested structure
+        const processedMembers = (membersData || []).map(item => {
+          // Handle if item.members is an array or an object
+          const memberData = Array.isArray(item.members) ? item.members[0] : item.members;
+          return {
+            id: memberData.id,
+            first_name: memberData.first_name,
+            last_name: memberData.last_name
+          } as Member;
+        });
 
         // Filter out leaders from the members list
         const leaderIds = new Set(processedLeaders.map(leader => leader.id));
