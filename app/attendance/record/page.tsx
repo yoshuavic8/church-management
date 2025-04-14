@@ -117,6 +117,8 @@ export default function RecordAttendancePage() {
 
       if (membersError) throw membersError;
 
+      console.log('Cell Group Members:', JSON.stringify(cellGroupMembers, null, 2));
+
       // Also get leaders of this cell group
       const { data: cellGroupLeaders, error: leadersError } = await supabase
         .from('cell_group_leaders')
@@ -133,20 +135,30 @@ export default function RecordAttendancePage() {
 
       if (leadersError) throw leadersError;
 
+      console.log('Cell Group Leaders:', JSON.stringify(cellGroupLeaders, null, 2));
+
       // Combine and format members data - fix the type issue
       const allMemberData = [
-        ...(cellGroupMembers || []).map(item => ({
-          id: item.members.id,
-          first_name: item.members.first_name,
-          last_name: item.members.last_name,
-          status: item.members.status
-        } as Member)),
-        ...(cellGroupLeaders || []).map(item => ({
-          id: item.members.id,
-          first_name: item.members.first_name,
-          last_name: item.members.last_name,
-          status: item.members.status
-        } as Member))
+        ...(cellGroupMembers || []).map(item => {
+          // Check if item.members is an array or an object
+          const memberData = Array.isArray(item.members) ? item.members[0] : item.members;
+          return {
+            id: memberData.id,
+            first_name: memberData.first_name,
+            last_name: memberData.last_name,
+            status: memberData.status
+          } as Member;
+        }),
+        ...(cellGroupLeaders || []).map(item => {
+          // Check if item.members is an array or an object
+          const memberData = Array.isArray(item.members) ? item.members[0] : item.members;
+          return {
+            id: memberData.id,
+            first_name: memberData.first_name,
+            last_name: memberData.last_name,
+            status: memberData.status
+          } as Member;
+        })
       ];
 
       // Remove duplicates (a leader might also be in the members list)
