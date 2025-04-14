@@ -66,11 +66,17 @@ export default function CellGroupsPage() {
             if (leaderError) console.error('Error fetching leader count:', leaderError);
             if (memberError) console.error('Error fetching member count:', memberError);
 
+            // Fix the district property if it's an array
+            const processedDistrict = Array.isArray(group.district)
+              ? group.district[0]
+              : group.district;
+
             return {
               ...group,
+              district: processedDistrict,
               leader_count: leaderCount || 0,
               member_count: memberCount || 0,
-              district_name: group.district?.name || 'Unknown District'
+              district_name: processedDistrict?.name || 'Unknown District'
             };
           }));
 

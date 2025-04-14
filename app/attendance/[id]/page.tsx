@@ -75,7 +75,16 @@ export default function AttendanceDetailPage() {
           .single();
 
         if (meetingError) throw meetingError;
-        setMeeting(meetingData);
+
+        // Fix the cell_group property if it's an array
+        const processedMeeting = {
+          ...meetingData,
+          cell_group: Array.isArray(meetingData.cell_group)
+            ? meetingData.cell_group[0]
+            : meetingData.cell_group
+        };
+
+        setMeeting(processedMeeting);
 
         // Fetch participants
         const { data: participantsData, error: participantsError } = await supabase
@@ -90,7 +99,16 @@ export default function AttendanceDetailPage() {
           .eq('meeting_id', id);
 
         if (participantsError) throw participantsError;
-        setParticipants(participantsData || []);
+
+        // Process participants data to handle member property if it's an array
+        const processedParticipants = (participantsData || []).map(participant => ({
+          ...participant,
+          member: Array.isArray(participant.member)
+            ? participant.member[0]
+            : participant.member
+        }));
+
+        setParticipants(processedParticipants);
 
         // Fetch visitors
         const { data: visitorsData, error: visitorsError } = await supabase

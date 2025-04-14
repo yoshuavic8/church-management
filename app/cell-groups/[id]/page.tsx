@@ -65,7 +65,15 @@ export default function CellGroupDetailPage() {
 
         if (cellGroupError) throw cellGroupError;
 
-        setCellGroup(cellGroupData);
+        // Fix the district property if it's an array
+        const processedCellGroup = {
+          ...cellGroupData,
+          district: Array.isArray(cellGroupData.district)
+            ? cellGroupData.district[0]
+            : cellGroupData.district
+        };
+
+        setCellGroup(processedCellGroup);
 
         // Fetch leaders
         const { data: leadersData, error: leadersError } = await supabase
