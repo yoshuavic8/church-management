@@ -28,22 +28,60 @@ export default function MemberDetailPage() {
   const { id } = useParams();
   const router = useRouter();
   const [member, setMember] = useState<Member | null>(null);
+  const [cellGroup, setCellGroup] = useState<{id: string, name: string} | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const fetchMember = async () => {
+    const fetchMemberData = async () => {
       try {
         const supabase = getSupabaseClient();
-        const { data, error } = await supabase
+
+        // Fetch member data
+        const { data: memberData, error: memberError } = await supabase
           .from('members')
           .select('*')
           .eq('id', id)
           .single();
 
-        if (error) throw error;
-        setMember(data as Member);
+        if (memberError) throw memberError;
+        setMember(memberData as Member);
+
+        // Fetch cell group data for this member
+        const { data: cellGroupMemberData, error: cellGroupMemberError } = await supabase
+          .from('cell_group_members')
+          .select('cell_group_id')
+          .eq('member_id', id);
+
+        if (cellGroupMemberError) throw cellGroupMemberError;
+
+        // Also check if member is a cell group leader
+        const { data: cellGroupLeaderData, error: cellGroupLeaderError } = await supabase
+          .from('cell_group_leaders')
+          .select('cell_group_id')
+          .eq('member_id', id);
+
+        if (cellGroupLeaderError) throw cellGroupLeaderError;
+
+        // Combine cell group IDs from both member and leader tables
+        const cellGroupIds = [
+          ...(cellGroupMemberData || []).map(item => item.cell_group_id),
+          ...(cellGroupLeaderData || []).map(item => item.cell_group_id)
+        ];
+
+        // If member belongs to any cell group, fetch the cell group details
+        if (cellGroupIds.length > 0) {
+          const { data: cellGroupData, error: cellGroupError } = await supabase
+            .from('cell_groups')
+            .select('id, name')
+            .eq('id', cellGroupIds[0]) // For now, just use the first cell group
+            .single();
+
+          if (cellGroupError) throw cellGroupError;
+          setCellGroup(cellGroupData);
+        }
       } catch (error: any) {
+        console.error('Error fetching data:', error);
         setError(error.message || 'Failed to fetch member data');
       } finally {
         setLoading(false);
@@ -51,7 +89,7 @@ export default function MemberDetailPage() {
     };
 
     if (id) {
-      fetchMember();
+      fetchMemberData();
     }
   }, [id]);
 
@@ -205,10 +243,21 @@ export default function MemberDetailPage() {
 
           <div className="card mt-6">
             <h2 className="text-xl font-semibold mb-4">Cell Group</h2>
-            <p className="text-gray-700">Faith Builders</p>
-            <Link href={`/cell-groups/1`} className="text-primary hover:underline mt-2 block">
-              View Cell Group
-            </Link>
+            {cellGroup ? (
+              <>
+                <p className="text-gray-700">{cellGroup.name}</p>
+                <Link href={`/cell-groups/${cellGroup.id}`} className="text-primary hover:underline mt-2 block">
+                  View Cell Group
+                </Link>
+              </>
+            ) : (
+              <>
+                <p className="text-gray-500">Not assigned to any cell group</p>
+                <Link href={`/cell-groups?add_member=${member.id}`} className="text-primary hover:underline mt-2 block">
+                  Add to Cell Group
+                </Link>
+              </>
+            )}
           </div>
 
           <div className="card mt-6">
@@ -217,8 +266,8 @@ export default function MemberDetailPage() {
               <Link href={`/pastoral/visit/new?member=${member.id}`} className="text-primary hover:underline block">
                 Schedule Pastoral Visit
               </Link>
-              <Link href={`/attendance/record?member=${member.id}`} className="text-primary hover:underline block">
-                Record Attendance
+              <Link href={`/attendance?member=${member.id}`} className="text-primary hover:underline block">
+                View Attendance History
               </Link>
               <Link href={`/admin/documents/generate?member=${member.id}`} className="text-primary hover:underline block">
                 Generate Documents

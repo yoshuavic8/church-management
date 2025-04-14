@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { getSupabaseClient } from '../lib/supabase';
 import Header from '../components/Header';
 
@@ -25,7 +26,11 @@ type AttendanceRecord = {
 };
 
 export default function AttendancePage() {
+  const searchParams = useSearchParams();
+  const memberId = searchParams.get('member');
+
   const [records, setRecords] = useState<AttendanceRecord[]>([]);
+  const [memberName, setMemberName] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all');
 
@@ -34,8 +39,23 @@ export default function AttendancePage() {
       try {
         const supabase = getSupabaseClient();
 
+        // If memberId is provided, fetch member name
+        if (memberId) {
+          const { data: memberData, error: memberError } = await supabase
+            .from('members')
+            .select('first_name, last_name')
+            .eq('id', memberId)
+            .single();
+
+          if (memberError) throw memberError;
+
+          if (memberData) {
+            setMemberName(`${memberData.first_name} ${memberData.last_name}`);
+          }
+        }
+
         // Fetch attendance meetings with cell group info
-        const { data: meetingsData, error: meetingsError } = await supabase
+        let query = supabase
           .from('attendance_meetings')
           .select(`
             id,
@@ -48,6 +68,29 @@ export default function AttendancePage() {
             cell_group:cell_group_id (name)
           `)
           .order('meeting_date', { ascending: false });
+
+        // If memberId is provided, filter meetings where this member participated
+        if (memberId) {
+          // First get all meetings where this member participated
+          const { data: participationData, error: participationError } = await supabase
+            .from('attendance_participants')
+            .select('meeting_id')
+            .eq('member_id', memberId);
+
+          if (participationError) throw participationError;
+
+          if (participationData && participationData.length > 0) {
+            const meetingIds = participationData.map(p => p.meeting_id);
+            query = query.in('id', meetingIds);
+          } else {
+            // If no participation records found, return empty array
+            setRecords([]);
+            setLoading(false);
+            return;
+          }
+        }
+
+        const { data: meetingsData, error: meetingsError } = await query;
 
         if (meetingsError) throw meetingsError;
 
@@ -132,7 +175,7 @@ export default function AttendancePage() {
     };
 
     fetchAttendanceRecords();
-  }, []);
+  }, [memberId]);
 
   const filteredRecords = records.filter(record => {
     if (filter === 'all') return true;
@@ -165,9 +208,17 @@ export default function AttendancePage() {
   return (
     <div>
       <Header
-        title="Attendance"
-        actions={actionButton}
+        title={memberId ? `Attendance History for ${memberName}` : "Attendance"}
+        actions={!memberId ? actionButton : undefined}
       />
+
+      {memberId && (
+        <div className="mb-4">
+          <Link href={`/members/${memberId}`} className="text-primary hover:underline">
+            &larr; Back to Member Profile
+          </Link>
+        </div>
+      )}
 
       <div className="card mb-6">
         <div className="flex flex-wrap gap-2">

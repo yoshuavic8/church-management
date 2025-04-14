@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { getSupabaseClient } from '../lib/supabase';
 import Header from '../components/Header';
 
@@ -21,10 +22,46 @@ type CellGroup = {
 };
 
 export default function CellGroupsPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const addMemberId = searchParams.get('add_member');
+
   const [cellGroups, setCellGroups] = useState<CellGroup[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [memberToAdd, setMemberToAdd] = useState<{id: string, name: string} | null>(null);
+  const [addingMember, setAddingMember] = useState(false);
+
+  // Fetch member data if add_member parameter is present
+  useEffect(() => {
+    const fetchMemberData = async () => {
+      if (addMemberId) {
+        try {
+          const supabase = getSupabaseClient();
+          const { data, error } = await supabase
+            .from('members')
+            .select('id, first_name, last_name')
+            .eq('id', addMemberId)
+            .single();
+
+          if (error) throw error;
+
+          if (data) {
+            setMemberToAdd({
+              id: data.id,
+              name: `${data.first_name} ${data.last_name}`
+            });
+          }
+        } catch (error: any) {
+          console.error('Error fetching member data:', error);
+          setError(error.message || 'Failed to fetch member data');
+        }
+      }
+    };
+
+    fetchMemberData();
+  }, [addMemberId]);
 
   useEffect(() => {
     const fetchCellGroups = async () => {
@@ -99,10 +136,52 @@ export default function CellGroupsPage() {
     const searchLower = searchTerm.toLowerCase();
     return (
       group.name.toLowerCase().includes(searchLower) ||
-      group.district_name.toLowerCase().includes(searchLower) ||
-      group.meeting_day.toLowerCase().includes(searchLower)
+      group.district_name?.toLowerCase().includes(searchLower) ||
+      group.meeting_day?.toLowerCase().includes(searchLower)
     );
   });
+
+  // Function to add a member to a cell group
+  const handleAddMemberToCellGroup = async (cellGroupId: string) => {
+    if (!memberToAdd) return;
+
+    try {
+      setAddingMember(true);
+      const supabase = getSupabaseClient();
+
+      // Check if member is already in this cell group
+      const { data: existingMember, error: checkError } = await supabase
+        .from('cell_group_members')
+        .select('id')
+        .eq('cell_group_id', cellGroupId)
+        .eq('member_id', memberToAdd.id);
+
+      if (checkError) throw checkError;
+
+      if (existingMember && existingMember.length > 0) {
+        setError(`${memberToAdd.name} is already a member of this cell group`);
+        setAddingMember(false);
+        return;
+      }
+
+      // Add member to cell group
+      const { error: insertError } = await supabase
+        .from('cell_group_members')
+        .insert({
+          cell_group_id: cellGroupId,
+          member_id: memberToAdd.id
+        });
+
+      if (insertError) throw insertError;
+
+      // Redirect to member detail page
+      router.push(`/members/${memberToAdd.id}?success=added_to_cell_group`);
+    } catch (error: any) {
+      console.error('Error adding member to cell group:', error);
+      setError(error.message || 'Failed to add member to cell group');
+      setAddingMember(false);
+    }
+  };
 
   // Define the action button for the header
   const actionButton = (
@@ -117,6 +196,12 @@ export default function CellGroupsPage() {
         title="Cell Groups"
         actions={actionButton}
       />
+
+      {memberToAdd && (
+        <div className="bg-blue-100 border border-blue-400 text-blue-700 px-4 py-3 rounded mb-4">
+          <p className="font-medium">Select a cell group to add {memberToAdd.name} to:</p>
+        </div>
+      )}
 
       <div className="card mb-6">
         <div className="flex items-center">
@@ -152,6 +237,18 @@ export default function CellGroupsPage() {
                   {group.status.charAt(0).toUpperCase() + group.status.slice(1)}
                 </span>
               </div>
+
+              {memberToAdd && group.status === 'active' && (
+                <div className="mt-4">
+                  <button
+                    onClick={() => handleAddMemberToCellGroup(group.id)}
+                    disabled={addingMember}
+                    className="btn-primary w-full"
+                  >
+                    {addingMember ? 'Adding...' : `Add ${memberToAdd.name} to this group`}
+                  </button>
+                </div>
+              )}
 
               <p className="text-gray-600 mt-2">District: {group.district_name}</p>
 
