@@ -198,6 +198,8 @@ export default function CellGroupDetailPage() {
       <Header
         title="Cell Group Details"
         actions={actionButtons}
+        backTo="/cell-groups"
+        backLabel="Cell Groups List"
       />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

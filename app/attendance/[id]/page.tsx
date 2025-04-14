@@ -205,7 +205,11 @@ export default function AttendanceDetailPage() {
   if (error) {
     return (
       <div>
-        <Header title="Attendance Details" />
+        <Header
+          title="Attendance Details"
+          backTo="/attendance"
+          backLabel="Attendance List"
+        />
         <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
           {error}
         </div>
@@ -216,7 +220,11 @@ export default function AttendanceDetailPage() {
   if (!meeting) {
     return (
       <div>
-        <Header title="Attendance Details" />
+        <Header
+          title="Attendance Details"
+          backTo="/attendance"
+          backLabel="Attendance List"
+        />
         <div className="bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded mb-4">
           Attendance record not found
         </div>
@@ -226,7 +234,11 @@ export default function AttendanceDetailPage() {
 
   return (
     <div>
-      <Header title="Attendance Details" />
+      <Header
+        title="Attendance Details"
+        backTo="/attendance"
+        backLabel="Attendance List"
+      />
 
       <div className="card mb-6">
         <div className="flex justify-between items-start">

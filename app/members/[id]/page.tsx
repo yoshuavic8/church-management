@@ -134,6 +134,8 @@ export default function MemberDetailPage() {
       <Header
         title="Member Details"
         actions={actionButtons}
+        backTo="/members"
+        backLabel="Members List"
       />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

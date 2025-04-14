@@ -189,7 +189,8 @@ export default function CellGroupMembersPage() {
     <div>
       <Header
         title="Manage Cell Group Members"
-        actions={actionButtons}
+        backTo={`/cell-groups/${id}`}
+        backLabel="Cell Group Details"
       />
 
       <div className="card mb-6">

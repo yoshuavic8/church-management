@@ -54,7 +54,11 @@ export default function EditMemberPage() {
 
   return (
     <div>
-      <Header title="Edit Member" />
+      <Header
+        title="Edit Member"
+        backTo={`/members/${id}`}
+        backLabel="Member Details"
+      />
       <div className="card">
         {member && <MemberForm initialData={member} mode="edit" />}
       </div>
