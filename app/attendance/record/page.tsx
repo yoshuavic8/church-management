@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { getSupabaseClient } from '../../lib/supabase';
 import Header from '../../components/Header';
@@ -34,7 +34,8 @@ type Visitor = {
   notes: string;
 };
 
-export default function RecordAttendancePage() {
+// Client component that uses useSearchParams
+function RecordAttendanceContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const cellGroupIdParam = searchParams.get('cell_group');
@@ -328,8 +329,6 @@ export default function RecordAttendancePage() {
 
   return (
     <div>
-      <Header title="Record Attendance" />
-
       {error && (
         <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
           {error}
@@ -703,6 +702,22 @@ export default function RecordAttendancePage() {
           </div>
         </>
       )}
+    </div>
+  );
+}
+
+// Page component with Suspense boundary
+export default function RecordAttendancePage() {
+  return (
+    <div>
+      <Header title="Record Attendance" />
+      <Suspense fallback={
+        <div className="flex justify-center items-center h-64">
+          <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
+        </div>
+      }>
+        <RecordAttendanceContent />
+      </Suspense>
     </div>
   );
 }

@@ -1,12 +1,13 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import MemberForm from '../../components/MemberForm';
 import Header from '../../components/Header';
 import { getSupabaseClient } from '../../lib/supabase';
 
-export default function AddMemberPage() {
+// Client component that uses useSearchParams
+function AddMemberContent() {
   const searchParams = useSearchParams();
   const visitorId = searchParams.get('from_visitor');
   const [visitorData, setVisitorData] = useState<any>(null);
@@ -53,8 +54,6 @@ export default function AddMemberPage() {
 
   return (
     <div>
-      <Header title={title} />
-
       {error && (
         <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
           {error}
@@ -77,6 +76,22 @@ export default function AddMemberPage() {
           <MemberForm mode="add" initialData={initialData} />
         </div>
       )}
+    </div>
+  );
+}
+
+// Page component with Suspense boundary
+export default function AddMemberPage() {
+  return (
+    <div>
+      <Header title="Add New Member" />
+      <Suspense fallback={
+        <div className="flex justify-center items-center h-64">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+        </div>
+      }>
+        <AddMemberContent />
+      </Suspense>
     </div>
   );
 }
