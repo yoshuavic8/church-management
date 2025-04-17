@@ -7,9 +7,32 @@ export async function middleware(request: NextRequest) {
   const supabase = createMiddlewareClient({ req: request, res });
 
   // Check if we have a session
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
+  let session;
+  try {
+    const { data, error } = await supabase.auth.getSession();
+
+    if (error) {
+      console.error("Error getting session:", error);
+
+      // Clear auth cookies on error
+      const response = NextResponse.redirect(
+        new URL("/auth/login", request.url)
+      );
+      response.cookies.delete("sb-access-token");
+      response.cookies.delete("sb-refresh-token");
+      return response;
+    }
+
+    session = data.session;
+  } catch (error) {
+    console.error("Unexpected error in middleware:", error);
+
+    // Clear auth cookies on error
+    const response = NextResponse.redirect(new URL("/auth/login", request.url));
+    response.cookies.delete("sb-access-token");
+    response.cookies.delete("sb-refresh-token");
+    return response;
+  }
 
   const pathname = request.nextUrl.pathname;
 

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { getSupabaseClient } from '../../lib/supabase';
@@ -12,6 +12,27 @@ export default function Login() {
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
 
+  // Clear any invalid tokens on page load
+  useEffect(() => {
+    const clearInvalidTokens = async () => {
+      try {
+        const supabase = getSupabaseClient();
+        // Check if we have a session
+        const { data, error } = await supabase.auth.getSession();
+
+        if (error) {
+          console.error('Error getting session:', error);
+          // Sign out to clear any invalid tokens
+          await supabase.auth.signOut();
+        }
+      } catch (error) {
+        console.error('Unexpected error checking session:', error);
+      }
+    };
+
+    clearInvalidTokens();
+  }, []);
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -19,6 +40,11 @@ export default function Login() {
 
     try {
       const supabase = getSupabaseClient();
+
+      // Sign out first to clear any existing tokens
+      await supabase.auth.signOut();
+
+      // Then sign in
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
