@@ -320,9 +320,12 @@ export default function AdminPage() {
             Manage user accounts and permissions for the church management system.
           </p>
 
-          <div className="flex justify-end mb-4">
-            <Link href="/admin/users" className="btn-primary">
-              Manage Users & Roles
+          <div className="flex justify-end mb-4 space-x-2">
+            <Link href="/admin/users" className="btn-secondary">
+              Manage Users
+            </Link>
+            <Link href="/admin/roles" className="btn-primary">
+              Manage Roles
             </Link>
           </div>
 

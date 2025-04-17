@@ -31,7 +31,7 @@ export default function Login() {
       // Get user role from members table
       const { data: userData, error: userError } = await supabase
         .from('members')
-        .select('role')
+        .select('role, role_level, role_context')
         .eq('id', data.user?.id)
         .maybeSingle();
 
@@ -43,25 +43,36 @@ export default function Login() {
       // Check if user has role in metadata
       const userMetadata = data.user?.user_metadata;
       const metadataRole = userMetadata?.role;
+      const metadataRoleLevel = userMetadata?.role_level;
 
       // Use role from members table, metadata, or default to 'member'
       const role = userData?.role || metadataRole || 'member';
+      const roleLevel = userData?.role_level || metadataRoleLevel || 1;
+      const roleContext = userData?.role_context || userMetadata?.role_context || null;
 
-      // Update user metadata with role
+      // Update user metadata with role information
       await supabase.auth.updateUser({
-        data: { role }
+        data: {
+          role,
+          role_level: roleLevel,
+          role_context: roleContext
+        }
       });
 
       // Check if there's a redirect URL in the query parameters
       const searchParams = new URLSearchParams(window.location.search);
       const redirectTo = searchParams.get('redirectTo');
 
-      // Redirect based on role or redirectTo parameter
+      // Redirect based on role level or redirectTo parameter
       if (redirectTo) {
         router.push(redirectTo);
-      } else if (role === 'admin') {
+      } else if (roleLevel >= 4) { // Admin
         router.push('/dashboard');
-      } else {
+      } else if (roleLevel >= 3) { // Ministry Leader
+        router.push('/ministries/dashboard');
+      } else if (roleLevel >= 2) { // Cell Leader
+        router.push('/cell-groups/dashboard');
+      } else { // Regular Member
         router.push('/member/dashboard');
       }
     } catch (error: any) {

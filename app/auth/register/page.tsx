@@ -29,6 +29,12 @@ export default function Register() {
       const { error } = await supabase.auth.signUp({
         email,
         password,
+        options: {
+          data: {
+            role: 'member',
+            role_level: 1
+          }
+        }
       });
 
       if (error) {

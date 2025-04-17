@@ -1,73 +1,113 @@
-import { NextResponse } from 'next/server';
-import type { NextRequest } from 'next/server';
-import { createMiddlewareClient } from '@supabase/auth-helpers-nextjs';
+import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
+import { createMiddlewareClient } from "@supabase/auth-helpers-nextjs";
 
 export async function middleware(request: NextRequest) {
   const res = NextResponse.next();
   const supabase = createMiddlewareClient({ req: request, res });
-  
+
   // Check if we have a session
   const {
     data: { session },
   } = await supabase.auth.getSession();
 
   const pathname = request.nextUrl.pathname;
-  
+
   // If no session and trying to access protected routes
   if (!session) {
     // Allow access to public routes
     if (
-      pathname === '/' ||
-      pathname === '/auth/login' ||
-      pathname === '/auth/register' ||
-      pathname === '/self-checkin' ||
-      pathname.startsWith('/_next') ||
-      pathname.startsWith('/api/auth')
+      pathname === "/" ||
+      pathname === "/auth/login" ||
+      pathname === "/auth/register" ||
+      pathname === "/self-checkin" ||
+      pathname.startsWith("/_next") ||
+      pathname.startsWith("/api/auth")
     ) {
       return res;
     }
-    
+
     // Redirect to login for all other routes
-    const redirectUrl = new URL('/auth/login', request.url);
-    redirectUrl.searchParams.set('redirectTo', pathname);
+    const redirectUrl = new URL("/auth/login", request.url);
+    redirectUrl.searchParams.set("redirectTo", pathname);
     return NextResponse.redirect(redirectUrl);
   }
 
-  // Get user role from session
-  const userRole = session.user?.user_metadata?.role || 'member';
-  
-  // Admin routes - only accessible by admins
+  // Get user role level from session
+  const userMetadata = session.user?.user_metadata || {};
+  const userRoleLevel = Number(userMetadata.role_level) || 1;
+  const userRole = userMetadata.role || "member";
+
+  // Admin-only routes (level 4)
   if (
-    (pathname.startsWith('/admin') ||
-     pathname.startsWith('/members') ||
-     pathname.startsWith('/cell-groups') ||
-     pathname.startsWith('/districts') ||
-     pathname.startsWith('/ministries') ||
-     pathname.startsWith('/classes') ||
-     pathname.startsWith('/pastoral') ||
-     pathname.startsWith('/attendance') ||
-     pathname === '/dashboard') && 
-    userRole !== 'admin'
+    (pathname.startsWith("/admin") || pathname === "/dashboard") &&
+    userRoleLevel < 4
   ) {
     // Redirect non-admin users to member dashboard
-    return NextResponse.redirect(new URL('/member/dashboard', request.url));
+    return NextResponse.redirect(new URL("/member/dashboard", request.url));
   }
-  
+
+  // Ministry leader routes (level 3+)
+  if (
+    (pathname.startsWith("/ministries/manage") ||
+      pathname.startsWith("/classes/manage")) &&
+    userRoleLevel < 3
+  ) {
+    // Redirect to member dashboard
+    return NextResponse.redirect(new URL("/member/dashboard", request.url));
+  }
+
+  // Cell leader routes (level 2+)
+  if (
+    (pathname.startsWith("/cell-groups/manage") ||
+      pathname.startsWith("/attendance/record")) &&
+    userRoleLevel < 2
+  ) {
+    // Redirect to member dashboard
+    return NextResponse.redirect(new URL("/member/dashboard", request.url));
+  }
+
+  // Staff routes (level 2+) - accessible by cell leaders, ministry leaders, and admins
+  if (
+    (pathname.startsWith("/members") ||
+      pathname.startsWith("/cell-groups") ||
+      pathname.startsWith("/districts") ||
+      pathname.startsWith("/ministries") ||
+      pathname.startsWith("/classes") ||
+      pathname.startsWith("/pastoral") ||
+      pathname.startsWith("/attendance")) &&
+    userRoleLevel < 2
+  ) {
+    // Redirect regular members to member dashboard
+    return NextResponse.redirect(new URL("/member/dashboard", request.url));
+  }
+
   // Member routes - only accessible by logged in users
-  if (pathname.startsWith('/member') && !session) {
-    return NextResponse.redirect(new URL('/auth/login', request.url));
+  if (pathname.startsWith("/member") && !session) {
+    return NextResponse.redirect(new URL("/auth/login", request.url));
   }
-  
+
   // If user is logged in and tries to access login/register pages
-  if (session && (pathname === '/auth/login' || pathname === '/auth/register')) {
-    // Redirect to appropriate dashboard based on role
-    if (userRole === 'admin') {
-      return NextResponse.redirect(new URL('/dashboard', request.url));
+  if (
+    session &&
+    (pathname === "/auth/login" || pathname === "/auth/register")
+  ) {
+    // Redirect to appropriate dashboard based on role level
+    if (userRoleLevel >= 4) {
+      return NextResponse.redirect(new URL("/dashboard", request.url));
+    } else if (userRoleLevel >= 3) {
+      return NextResponse.redirect(
+        new URL("/ministries/dashboard", request.url)
+      );
+    } else if (userRoleLevel >= 2) {
+      return NextResponse.redirect(
+        new URL("/cell-groups/dashboard", request.url)
+      );
     } else {
-      return NextResponse.redirect(new URL('/member/dashboard', request.url));
+      return NextResponse.redirect(new URL("/member/dashboard", request.url));
     }
   }
-  
+
   return res;
 }
 
@@ -80,6 +120,6 @@ export const config = {
      * - _next/image (image optimization files)
      * - favicon.ico (favicon file)
      */
-    '/((?!_next/static|_next/image|favicon.ico).*)',
+    "/((?!_next/static|_next/image|favicon.ico).*)",
   ],
 };
