@@ -28,6 +28,9 @@ export default function MembersPage() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [memberToDeactivate, setMemberToDeactivate] = useState<{id: string, name: string} | null>(null);
+  const [deactivating, setDeactivating] = useState(false);
 
   useEffect(() => {
     const fetchMembers = async () => {
@@ -67,6 +70,52 @@ export default function MembersPage() {
   });
 
   // Define the action button for the header
+  // Function to handle member deactivation
+  const handleDeactivateMember = (id: string, firstName: string, lastName: string) => {
+    setMemberToDeactivate({ id, name: `${firstName} ${lastName}` });
+    setShowConfirmModal(true);
+  };
+
+  // Function to confirm deactivation
+  const confirmDeactivation = async () => {
+    if (!memberToDeactivate) return;
+
+    try {
+      setDeactivating(true);
+      const supabase = getSupabaseClient();
+
+      // Update member status to 'inactive' instead of deleting
+      const { error } = await supabase
+        .from('members')
+        .update({ status: 'inactive' })
+        .eq('id', memberToDeactivate.id);
+
+      if (error) throw error;
+
+      // Update the UI
+      setMembers(members.map(member =>
+        member.id === memberToDeactivate.id
+          ? { ...member, status: 'inactive' }
+          : member
+      ));
+
+      // Close modal
+      setShowConfirmModal(false);
+      setMemberToDeactivate(null);
+    } catch (error: any) {
+      console.error('Error deactivating member:', error);
+      setError(error.message || 'Failed to deactivate member');
+    } finally {
+      setDeactivating(false);
+    }
+  };
+
+  // Function to cancel deactivation
+  const cancelDeactivation = () => {
+    setShowConfirmModal(false);
+    setMemberToDeactivate(null);
+  };
+
   const actionButton = (
     <Link href="/members/add" className="btn-primary">
       Add New Member
@@ -145,6 +194,14 @@ export default function MembersPage() {
                       >
                         Edit
                       </Link>
+                      {member.status === 'active' && (
+                        <button
+                          onClick={() => handleDeactivateMember(member.id, member.first_name, member.last_name)}
+                          className="text-red-600 hover:text-red-800"
+                        >
+                          Deactivate
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>
@@ -159,6 +216,33 @@ export default function MembersPage() {
               )}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {/* Confirmation Modal */}
+      {showConfirmModal && memberToDeactivate && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg shadow-lg max-w-md w-full">
+            <h3 className="text-xl font-semibold mb-4">Confirm Deactivation</h3>
+            <p className="mb-6">Are you sure you want to deactivate {memberToDeactivate.name}? This will hide them from active lists but preserve their attendance history.</p>
+
+            <div className="flex justify-end space-x-3">
+              <button
+                onClick={cancelDeactivation}
+                className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-100"
+                disabled={deactivating}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDeactivation}
+                className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
+                disabled={deactivating}
+              >
+                {deactivating ? 'Deactivating...' : 'Deactivate'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
