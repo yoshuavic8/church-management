@@ -72,6 +72,9 @@ function AttendanceContent() {
     totalOffering: 0
   });
 
+  // UI state
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
+
   useEffect(() => {
     const fetchAttendanceRecords = async () => {
       try {
@@ -544,6 +547,17 @@ function AttendanceContent() {
     }
   };
 
+  // Helper to check if any filter is active
+  const isFilterActive = filter !== 'all' || timeFilter !== 'all' || cellGroupFilter !== '' || categoryFilter !== 'all';
+
+  // Helper to clear all filters
+  const clearAllFilters = () => {
+    setFilter('all');
+    setTimeFilter('all');
+    setCellGroupFilter('');
+    setCategoryFilter('all');
+  };
+
   // Define the action button for the header
   const actionButton = (
     <Link href="/attendance/record" className="btn-primary">
@@ -568,136 +582,233 @@ function AttendanceContent() {
 
       {/* Statistics Dashboard */}
       <div className="mb-6 card p-6">
-        <h2 className="text-xl font-semibold mb-4">Attendance Dashboard</h2>
-
-        {/* Tabs for different statistics views */}
-        <div className="mb-6">
-          <div className="border-b border-gray-200">
-            <nav className="-mb-px flex space-x-8">
-              <button
-                className="border-primary text-primary font-medium border-b-2 py-2 px-1"
-                aria-current="page"
-              >
-                Overview
-              </button>
-            </nav>
-          </div>
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-xl font-semibold">Attendance Dashboard</h2>
         </div>
 
-        {/* Current Month Statistics */}
-        <div className="mb-6">
-          <h3 className="text-lg font-medium mb-3">Current Month Statistics</h3>
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-            <div className="card p-4 bg-blue-50">
-              <h3 className="text-sm font-medium text-blue-700">Total Meetings</h3>
-              <p className="text-2xl font-bold text-blue-900">{currentMonthStats.totalMeetings}</p>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Current Month Statistics - Always visible */}
+          <div className="bg-white p-4 rounded-lg shadow">
+            <h3 className="text-md font-medium text-gray-700 mb-3 border-b pb-2">Current Month</h3>
+            <div className="space-y-3">
+              <div className="flex justify-between items-center">
+                <span className="text-gray-600">Total Meetings:</span>
+                <span className="font-semibold text-blue-600">{currentMonthStats.totalMeetings}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-gray-600">Total Attendance:</span>
+                <span className="font-semibold text-green-600">{currentMonthStats.totalAttendance}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-gray-600">Average Attendance:</span>
+                <span className="font-semibold text-indigo-600">{currentMonthStats.averageAttendance}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-gray-600">Total Visitors:</span>
+                <span className="font-semibold text-purple-600">{currentMonthStats.totalVisitors}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-gray-600">Total Offering:</span>
+                <span className="font-semibold text-yellow-600">Rp {currentMonthStats.totalOffering.toLocaleString('id-ID', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</span>
+              </div>
             </div>
-            <div className="card p-4 bg-green-50">
-              <h3 className="text-sm font-medium text-green-700">Total Attendance</h3>
-              <p className="text-2xl font-bold text-green-900">{currentMonthStats.totalAttendance}</p>
+          </div>
+
+          {/* Filtered Period Stats - Only show if filters are active */}
+          {isFilterActive ? (
+            <div className="bg-white p-4 rounded-lg shadow">
+              <h3 className="text-md font-medium text-gray-700 mb-3 border-b pb-2">Filtered Period</h3>
+              <div className="space-y-3">
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-600">Total Meetings:</span>
+                  <span className="font-semibold">{stats.totalMeetings}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-600">Total Attendance:</span>
+                  <span className="font-semibold">{stats.totalAttendance}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-600">Average Attendance:</span>
+                  <span className="font-semibold">{stats.averageAttendance}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-600">Total Visitors:</span>
+                  <span className="font-semibold">{stats.totalVisitors}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-600">Total Offering:</span>
+                  <span className="font-semibold">Rp {stats.totalOffering.toLocaleString('id-ID', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</span>
+                </div>
+              </div>
             </div>
-            <div className="card p-4 bg-indigo-50">
-              <h3 className="text-sm font-medium text-indigo-700">Average Attendance</h3>
-              <p className="text-2xl font-bold text-indigo-900">{currentMonthStats.averageAttendance}</p>
+          ) : (
+            <div className="bg-white p-4 rounded-lg shadow flex items-center justify-center">
+              <div className="text-center text-gray-500">
+                <p className="mb-2">Apply filters to see statistics for a specific period</p>
+                <p className="text-sm">Use the filter controls below to select a time period, category, or context</p>
+              </div>
             </div>
-            <div className="card p-4 bg-purple-50">
-              <h3 className="text-sm font-medium text-purple-700">Total Visitors</h3>
-              <p className="text-2xl font-bold text-purple-900">{currentMonthStats.totalVisitors}</p>
-            </div>
-            <div className="card p-4 bg-yellow-50">
-              <h3 className="text-sm font-medium text-yellow-700">Total Offering</h3>
-              <p className="text-2xl font-bold text-yellow-900">Rp {currentMonthStats.totalOffering.toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
-            </div>
+          )}
+
+          {/* Cell Group Insights */}
+          <div className="bg-white p-4 rounded-lg shadow">
+            <h3 className="text-md font-medium text-gray-700 mb-3 border-b pb-2">Context Insights</h3>
+            {stats.mostActiveCellGroup.name ? (
+              <div className="space-y-3">
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-600">Most Active:</span>
+                  <span className="font-semibold text-blue-600">{stats.mostActiveCellGroup.name}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-600">Most Visitors:</span>
+                  <span className="font-semibold text-green-600">{stats.mostVisitorsCellGroup.name}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-600">Highest Attendance:</span>
+                  <span className="font-semibold text-purple-600">{stats.highestAttendanceRate.name} ({stats.highestAttendanceRate.rate}%)</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-600">Growth Potential:</span>
+                  <span className="font-semibold text-yellow-600">{stats.highestGrowthCellGroup.name}</span>
+                </div>
+              </div>
+            ) : (
+              <div className="text-center text-gray-500 py-6">
+                <p>No data available for insights</p>
+              </div>
+            )}
           </div>
         </div>
-
-        {/* Filtered Statistics */}
-        {(filter !== 'all' || timeFilter !== 'all' || cellGroupFilter) && (
-          <div className="mb-6">
-            <h3 className="text-lg font-medium mb-3">Filtered Statistics</h3>
-            <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-              <div className="card p-4 bg-gray-50">
-                <h3 className="text-sm font-medium text-gray-700">Total Meetings</h3>
-                <p className="text-2xl font-bold">{stats.totalMeetings}</p>
-              </div>
-              <div className="card p-4 bg-gray-50">
-                <h3 className="text-sm font-medium text-gray-700">Total Attendance</h3>
-                <p className="text-2xl font-bold">{stats.totalAttendance}</p>
-              </div>
-              <div className="card p-4 bg-gray-50">
-                <h3 className="text-sm font-medium text-gray-700">Average Attendance</h3>
-                <p className="text-2xl font-bold">{stats.averageAttendance}</p>
-                {stats.totalMeetings > 0 && (
-                  <p className="text-sm text-gray-600 mt-1">
-                    {Math.round(stats.totalAttendance / stats.totalMeetings * 100)}% attendance rate
-                  </p>
-                )}
-              </div>
-              <div className="card p-4 bg-gray-50">
-                <h3 className="text-sm font-medium text-gray-700">Total Visitors</h3>
-                <p className="text-2xl font-bold">{stats.totalVisitors}</p>
-              </div>
-              <div className="card p-4 bg-gray-50">
-                <h3 className="text-sm font-medium text-gray-700">Total Offering</h3>
-                <p className="text-2xl font-bold">Rp {stats.totalOffering.toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Cell Group Insights */}
-        {stats.mostActiveCellGroup.name && (
-          <div className="mb-2">
-            <h3 className="text-lg font-medium mb-3">Cell Group Insights</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              <div className="card p-4 bg-blue-50">
-                <h3 className="text-sm font-medium text-blue-700">Most Active Cell Group</h3>
-                <p className="text-xl font-bold text-blue-900">{stats.mostActiveCellGroup.name}</p>
-                <p className="text-sm text-blue-700 mt-1">{stats.mostActiveCellGroup.count} meetings</p>
-              </div>
-
-              <div className="card p-4 bg-green-50">
-                <h3 className="text-sm font-medium text-green-700">Most Visitors</h3>
-                <p className="text-xl font-bold text-green-900">{stats.mostVisitorsCellGroup.name}</p>
-                <p className="text-sm text-green-700 mt-1">{stats.mostVisitorsCellGroup.count} visitors</p>
-              </div>
-
-              <div className="card p-4 bg-purple-50">
-                <h3 className="text-sm font-medium text-purple-700">Highest Attendance Rate</h3>
-                <p className="text-xl font-bold text-purple-900">{stats.highestAttendanceRate.name}</p>
-                <p className="text-sm text-purple-700 mt-1">{stats.highestAttendanceRate.rate}% attendance</p>
-              </div>
-
-              <div className="card p-4 bg-yellow-50">
-                <h3 className="text-sm font-medium text-yellow-700">Growth Potential</h3>
-                <p className="text-xl font-bold text-yellow-900">{stats.highestGrowthCellGroup.name}</p>
-                <p className="text-sm text-yellow-700 mt-1">Based on visitor count</p>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
 
       {/* Filters */}
       <div className="card mb-6">
-        <div className="mb-4">
-          <h3 className="text-lg font-medium mb-2">Filters</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Context Filter */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Context Name</label>
-              <input
-                type="text"
-                placeholder="Search cell group, ministry, etc..."
-                className="input-field"
-                value={cellGroupFilter}
-                onChange={(e) => setCellGroupFilter(e.target.value)}
-              />
-            </div>
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-xl font-semibold">Filters</h2>
+          <button
+            onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
+            className="text-sm text-primary hover:underline flex items-center"
+          >
+            {showAdvancedFilters ? (
+              <>
+                <span className="mr-1">Hide Advanced Filters</span>
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                </svg>
+              </>
+            ) : (
+              <>
+                <span className="mr-1">Show Advanced Filters</span>
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </>
+            )}
+          </button>
+        </div>
 
+        {/* Active Filter Tags */}
+        <div className="flex flex-wrap gap-2 mb-4">
+          {timeFilter !== 'all' && (
+            <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm flex items-center">
+              {timeFilter === 'week' ? 'Last 7 Days' :
+               timeFilter === 'month' ? 'Previous Month' :
+               timeFilter === 'quarter' ? 'Last 3 Months' : 'Last 365 Days'}
+              <button
+                onClick={() => setTimeFilter('all')}
+                className="ml-2 text-blue-600 hover:text-blue-800"
+                aria-label="Remove time filter"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </span>
+          )}
+
+          {filter !== 'all' && (
+            <span className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm flex items-center">
+              Type: {getMeetingTypeLabel(filter)}
+              <button
+                onClick={() => setFilter('all')}
+                className="ml-2 text-green-600 hover:text-green-800"
+                aria-label="Remove meeting type filter"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </span>
+          )}
+
+          {categoryFilter !== 'all' && (
+            <span className="px-3 py-1 bg-purple-100 text-purple-800 rounded-full text-sm flex items-center">
+              Category: {getCategoryLabel(categoryFilter)}
+              <button
+                onClick={() => setCategoryFilter('all')}
+                className="ml-2 text-purple-600 hover:text-purple-800"
+                aria-label="Remove category filter"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </span>
+          )}
+
+          {cellGroupFilter && (
+            <span className="px-3 py-1 bg-indigo-100 text-indigo-800 rounded-full text-sm flex items-center">
+              Context: {cellGroupFilter}
+              <button
+                onClick={() => setCellGroupFilter('')}
+                className="ml-2 text-indigo-600 hover:text-indigo-800"
+                aria-label="Remove context filter"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </span>
+          )}
+
+          {isFilterActive && (
+            <button
+              onClick={clearAllFilters}
+              className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm hover:bg-gray-200 flex items-center"
+            >
+              Clear All
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              </svg>
+            </button>
+          )}
+        </div>
+
+        {/* Basic Search Filter - Always visible */}
+        <div className="mb-4">
+          <label className="block text-sm font-medium text-gray-700 mb-1">Search by Context Name</label>
+          <div className="relative">
+            <input
+              type="text"
+              placeholder="Search cell group, ministry, etc..."
+              className="input-field pl-10"
+              value={cellGroupFilter}
+              onChange={(e) => setCellGroupFilter(e.target.value)}
+            />
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            </div>
+          </div>
+        </div>
+
+        {/* Advanced Filters - Collapsible */}
+        {showAdvancedFilters && (
+          <div className="border-t border-gray-200 pt-4 space-y-4">
             {/* Time Period Filter */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Time Period</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Time Period</label>
               <div className="flex flex-wrap gap-2">
                 <button
                   onClick={() => setTimeFilter('all')}
@@ -731,326 +842,271 @@ function AttendanceContent() {
                 </button>
               </div>
             </div>
-          </div>
-        </div>
 
-        {/* Event Category Filter */}
-        <div className="mb-4">
-          <h3 className="text-lg font-medium mb-2">Event Category</h3>
-          <div className="flex flex-wrap gap-2">
-            <button
-              onClick={() => setCategoryFilter('all')}
-              className={`px-3 py-1 rounded-md ${categoryFilter === 'all' ? 'bg-primary text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
-            >
-              All Categories
-            </button>
-            <button
-              onClick={() => setCategoryFilter('cell_group')}
-              className={`px-3 py-1 rounded-md ${categoryFilter === 'cell_group' ? 'bg-primary text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
-            >
-              Cell Group
-            </button>
-            <button
-              onClick={() => setCategoryFilter('ministry')}
-              className={`px-3 py-1 rounded-md ${categoryFilter === 'ministry' ? 'bg-primary text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
-            >
-              Ministry
-            </button>
-            <button
-              onClick={() => setCategoryFilter('prayer')}
-              className={`px-3 py-1 rounded-md ${categoryFilter === 'prayer' ? 'bg-primary text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
-            >
-              Prayer Meeting
-            </button>
-            <button
-              onClick={() => setCategoryFilter('service')}
-              className={`px-3 py-1 rounded-md ${categoryFilter === 'service' ? 'bg-primary text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
-            >
-              Church Service
-            </button>
-            <button
-              onClick={() => setCategoryFilter('other')}
-              className={`px-3 py-1 rounded-md ${categoryFilter === 'other' ? 'bg-primary text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
-            >
-              Other Event
-            </button>
-          </div>
-        </div>
+            {/* Event Category Filter */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Event Category</label>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={() => setCategoryFilter('all')}
+                  className={`px-3 py-1 rounded-md ${categoryFilter === 'all' ? 'bg-primary text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+                >
+                  All Categories
+                </button>
+                <button
+                  onClick={() => setCategoryFilter('cell_group')}
+                  className={`px-3 py-1 rounded-md ${categoryFilter === 'cell_group' ? 'bg-primary text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+                >
+                  Cell Group
+                </button>
+                <button
+                  onClick={() => setCategoryFilter('ministry')}
+                  className={`px-3 py-1 rounded-md ${categoryFilter === 'ministry' ? 'bg-primary text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+                >
+                  Ministry
+                </button>
+                <button
+                  onClick={() => setCategoryFilter('prayer')}
+                  className={`px-3 py-1 rounded-md ${categoryFilter === 'prayer' ? 'bg-primary text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+                >
+                  Prayer Meeting
+                </button>
+                <button
+                  onClick={() => setCategoryFilter('service')}
+                  className={`px-3 py-1 rounded-md ${categoryFilter === 'service' ? 'bg-primary text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+                >
+                  Church Service
+                </button>
+                <button
+                  onClick={() => setCategoryFilter('other')}
+                  className={`px-3 py-1 rounded-md ${categoryFilter === 'other' ? 'bg-primary text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+                >
+                  Other Event
+                </button>
+              </div>
+            </div>
 
-        <h3 className="text-lg font-medium mb-2">Meeting Type</h3>
-        <div className="flex flex-wrap gap-2">
-          <button
-            onClick={() => setFilter('all')}
-            className={`px-3 py-1 rounded-md ${
-              filter === 'all'
-                ? 'bg-primary text-white'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-            }`}
-          >
-            All
-          </button>
-          <button
-            onClick={() => setFilter('regular')}
-            className={`px-3 py-1 rounded-md ${
-              filter === 'regular'
-                ? 'bg-primary text-white'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-            }`}
-          >
-            Regular Meeting
-          </button>
-          <button
-            onClick={() => setFilter('special')}
-            className={`px-3 py-1 rounded-md ${
-              filter === 'special'
-                ? 'bg-primary text-white'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-            }`}
-          >
-            Special Meeting
-          </button>
-          <button
-            onClick={() => setFilter('outreach')}
-            className={`px-3 py-1 rounded-md ${
-              filter === 'outreach'
-                ? 'bg-primary text-white'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-            }`}
-          >
-            Outreach
-          </button>
-          <button
-            onClick={() => setFilter('prayer')}
-            className={`px-3 py-1 rounded-md ${
-              filter === 'prayer'
-                ? 'bg-primary text-white'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-            }`}
-          >
-            Prayer Meeting
-          </button>
-        </div>
+            {/* Meeting Type Filter */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Meeting Type</label>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={() => setFilter('all')}
+                  className={`px-3 py-1 rounded-md ${filter === 'all' ? 'bg-primary text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+                >
+                  All Types
+                </button>
+                <button
+                  onClick={() => setFilter('regular')}
+                  className={`px-3 py-1 rounded-md ${filter === 'regular' ? 'bg-primary text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+                >
+                  Regular Meeting
+                </button>
+                <button
+                  onClick={() => setFilter('special')}
+                  className={`px-3 py-1 rounded-md ${filter === 'special' ? 'bg-primary text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+                >
+                  Special Meeting
+                </button>
+                <button
+                  onClick={() => setFilter('outreach')}
+                  className={`px-3 py-1 rounded-md ${filter === 'outreach' ? 'bg-primary text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+                >
+                  Outreach
+                </button>
+                <button
+                  onClick={() => setFilter('prayer')}
+                  className={`px-3 py-1 rounded-md ${filter === 'prayer' ? 'bg-primary text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+                >
+                  Prayer Meeting
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* Active Filters Summary with Statistics */}
-      <div className="mb-6">
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="text-sm font-medium text-gray-700">Active Filters:</span>
-
-          {filter !== 'all' && (
-            <span className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-xs">
-              Type: {getMeetingTypeLabel(filter)}
-            </span>
-          )}
-
-          {timeFilter !== 'all' && (
-            <span className="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs">
-              Time: {timeFilter === 'week' ? 'Last 7 Days' :
-                    timeFilter === 'month' ? 'Previous Month' :
-                    timeFilter === 'quarter' ? 'Last 3 Months' : 'Last 365 Days'}
-            </span>
-          )}
-
-          {cellGroupFilter && (
-            <span className="px-2 py-1 bg-purple-100 text-purple-800 rounded-full text-xs">
-              Context: {cellGroupFilter}
-            </span>
-          )}
-
-          {categoryFilter !== 'all' && (
-            <span className="px-2 py-1 bg-indigo-100 text-indigo-800 rounded-full text-xs">
-              Category: {getCategoryLabel(categoryFilter)}
-            </span>
-          )}
-
-          {(filter !== 'all' || timeFilter !== 'all' || cellGroupFilter || categoryFilter !== 'all') && (
-            <button
-              onClick={() => {
-                setFilter('all');
-                setTimeFilter('all');
-                setCellGroupFilter('');
-                setCategoryFilter('all');
-              }}
-              className="px-2 py-1 bg-gray-100 text-gray-700 rounded-full text-xs hover:bg-gray-200"
-            >
-              Clear All Filters
-            </button>
-          )}
-        </div>
-
-        <p className="text-sm text-gray-600 mt-2">
+      {/* Records Summary */}
+      <div className="mb-4">
+        <p className="text-sm text-gray-600">
           Showing {filteredRecords.length} of {records.length} records
         </p>
       </div>
 
-      {loading ? (
-        <div className="flex justify-center items-center h-64">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+      {/* Data Table Section */}
+      <div className="card">
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-xl font-semibold">Attendance Records</h2>
         </div>
-      ) : (
-        <div className="overflow-x-auto">
-          <table className="min-w-full bg-white rounded-lg overflow-hidden">
-            <thead className="bg-gray-100">
-              <tr>
-                <th className="py-3 px-4 text-left">Date</th>
-                <th className="py-3 px-4 text-left">Context</th>
-                <th className="py-3 px-4 text-left">Type</th>
-                <th className="py-3 px-4 text-left">Topic</th>
-                <th className="py-3 px-4 text-right">Present</th>
-                <th className="py-3 px-4 text-right">Absent</th>
-                <th className="py-3 px-4 text-right">Late</th>
-                <th className="py-3 px-4 text-right">Visitors</th>
-                <th className="py-3 px-4 text-right">Total</th>
-                <th className="py-3 px-4 text-right">Offering</th>
-                <th className="py-3 px-4 text-left">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200">
-              {currentRecords.map((record) => (
-                <tr key={record.id} className="hover:bg-gray-50">
-                  <td className="py-3 px-4">
-                    {new Date(record.meeting_date).toLocaleDateString()}
-                  </td>
-                  <td className="py-3 px-4">{record.context_name}</td>
-                  <td className="py-3 px-4">{getMeetingTypeLabel(record.meeting_type)}</td>
-                  <td className="py-3 px-4">{record.topic || '-'}</td>
-                  <td className="py-3 px-4 text-right font-medium text-green-600">{record.present_count}</td>
-                  <td className="py-3 px-4 text-right text-red-600">{record.absent_count}</td>
-                  <td className="py-3 px-4 text-right text-yellow-600">{record.late_count}</td>
-                  <td className="py-3 px-4 text-right text-blue-600">{record.visitor_count}</td>
-                  <td className="py-3 px-4 text-right font-medium">{record.total_count}</td>
-                  <td className="py-3 px-4 text-right">
-                    {record.offering !== null ? (
-                      <span className="font-medium text-green-600">
-                        Rp {record.offering.toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                      </span>
-                    ) : (
-                      <span className="text-gray-400">-</span>
-                    )}
-                  </td>
-                  <td className="py-3 px-4">
-                    <Link
-                      href={`/attendance/${record.id}`}
-                      className="text-primary hover:underline"
-                    >
-                      View
-                    </Link>
-                  </td>
-                </tr>
-              ))}
 
-              {filteredRecords.length === 0 && (
+        {loading ? (
+          <div className="flex justify-center items-center h-64">
+            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="min-w-full bg-white rounded-lg overflow-hidden">
+              <thead className="bg-gray-100">
                 <tr>
-                  <td colSpan={11} className="py-4 px-4 text-center text-gray-500">
-                    <p className="mb-2">No attendance records found with the current filters.</p>
-                    {(filter !== 'all' || timeFilter !== 'all' || cellGroupFilter) && (
-                      <div className="flex justify-center">
-                        <button
-                          onClick={() => {
-                            setFilter('all');
-                            setTimeFilter('all');
-                            setCellGroupFilter('');
-                            setCategoryFilter('all');
-                          }}
-                          className="px-3 py-1 bg-gray-100 text-gray-700 rounded-md text-sm hover:bg-gray-200"
-                        >
-                          Clear All Filters
-                        </button>
-                      </div>
-                    )}
-                  </td>
+                  <th className="py-3 px-4 text-left">Date</th>
+                  <th className="py-3 px-4 text-left">Context</th>
+                  <th className="py-3 px-4 text-left">Type</th>
+                  <th className="py-3 px-4 text-right">Present</th>
+                  <th className="py-3 px-4 text-right">Visitors</th>
+                  <th className="py-3 px-4 text-right">Total</th>
+                  <th className="py-3 px-4 text-right">Offering</th>
+                  <th className="py-3 px-4 text-left">Actions</th>
                 </tr>
-              )}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-gray-200">
+                {currentRecords.map((record) => (
+                  <tr key={record.id} className="hover:bg-gray-50">
+                    <td className="py-3 px-4">
+                      {new Date(record.meeting_date).toLocaleDateString()}
+                    </td>
+                    <td className="py-3 px-4">
+                      <div className="font-medium">{record.context_name}</div>
+                      <div className="text-xs text-gray-500">{getCategoryLabel(record.event_category)}</div>
+                    </td>
+                    <td className="py-3 px-4">{getMeetingTypeLabel(record.meeting_type)}</td>
+                    <td className="py-3 px-4 text-right font-medium text-green-600">{record.present_count}</td>
+                    <td className="py-3 px-4 text-right text-blue-600">{record.visitor_count}</td>
+                    <td className="py-3 px-4 text-right font-medium">{record.total_count}</td>
+                    <td className="py-3 px-4 text-right">
+                      {record.offering !== null ? (
+                        <span className="font-medium text-green-600">
+                          Rp {record.offering.toLocaleString('id-ID', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                        </span>
+                      ) : (
+                        <span className="text-gray-400">-</span>
+                      )}
+                    </td>
+                    <td className="py-3 px-4">
+                      <Link
+                        href={`/attendance/${record.id}`}
+                        className="text-primary hover:underline"
+                      >
+                        View
+                      </Link>
+                    </td>
+                  </tr>
+                ))}
 
-          {/* Pagination */}
-          {filteredRecords.length > 0 && (
-            <div className="mt-4 flex flex-col sm:flex-row justify-between items-center">
-              <div className="mb-4 sm:mb-0">
-                <span className="text-sm text-gray-700">
-                  Showing <span className="font-medium">{indexOfFirstRecord + 1}</span> to{' '}
-                  <span className="font-medium">
-                    {Math.min(indexOfLastRecord, filteredRecords.length)}
-                  </span>{' '}
-                  of <span className="font-medium">{filteredRecords.length}</span> results
-                </span>
-              </div>
+                {filteredRecords.length === 0 && (
+                  <tr>
+                    <td colSpan={8} className="py-8 px-4 text-center text-gray-500">
+                      <div className="flex flex-col items-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 text-gray-300 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                        </svg>
+                        <p className="text-lg font-medium mb-2">No attendance records found</p>
+                        <p className="text-sm text-gray-400 mb-4">Try adjusting your filters to find what you're looking for</p>
+                        {isFilterActive && (
+                          <button
+                            onClick={clearAllFilters}
+                            className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md text-sm hover:bg-gray-200 flex items-center"
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                            Clear All Filters
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
 
-              <div className="flex items-center space-x-2">
-                <select
-                  className="input-field py-1 px-2 text-sm"
-                  value={recordsPerPage}
-                  onChange={(e) => {
-                    setRecordsPerPage(Number(e.target.value));
-                    setCurrentPage(1); // Reset to first page when changing records per page
-                  }}
-                >
-                  <option value="5">5 per page</option>
-                  <option value="10">10 per page</option>
-                  <option value="25">25 per page</option>
-                  <option value="50">50 per page</option>
-                  <option value="100">100 per page</option>
-                </select>
+            {/* Pagination */}
+            {filteredRecords.length > 0 && (
+              <div className="mt-6 flex flex-col sm:flex-row justify-between items-center border-t border-gray-200 pt-4">
+                <div className="mb-4 sm:mb-0">
+                  <span className="text-sm text-gray-700">
+                    Showing <span className="font-medium">{indexOfFirstRecord + 1}</span> to{' '}
+                    <span className="font-medium">
+                      {Math.min(indexOfLastRecord, filteredRecords.length)}
+                    </span>{' '}
+                    of <span className="font-medium">{filteredRecords.length}</span> results
+                  </span>
+                </div>
 
-                <nav className="flex items-center">
-                  <button
-                    onClick={() => paginate(Math.max(1, currentPage - 1))}
-                    disabled={currentPage === 1}
-                    className={`px-3 py-1 rounded-l-md ${currentPage === 1 ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
+                <div className="flex items-center space-x-2">
+                  <select
+                    className="input-field py-1 px-2 text-sm"
+                    value={recordsPerPage}
+                    onChange={(e) => {
+                      setRecordsPerPage(Number(e.target.value));
+                      setCurrentPage(1); // Reset to first page when changing records per page
+                    }}
                   >
-                    Previous
-                  </button>
+                    <option value="5">5 per page</option>
+                    <option value="10">10 per page</option>
+                    <option value="25">25 per page</option>
+                    <option value="50">50 per page</option>
+                    <option value="100">100 per page</option>
+                  </select>
 
-                  {/* Page numbers */}
-                  <div className="hidden sm:flex">
-                    {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                      // Show pages around current page
-                      let pageNum;
-                      if (totalPages <= 5) {
-                        // If 5 or fewer pages, show all
-                        pageNum = i + 1;
-                      } else if (currentPage <= 3) {
-                        // If near start, show first 5 pages
-                        pageNum = i + 1;
-                      } else if (currentPage >= totalPages - 2) {
-                        // If near end, show last 5 pages
-                        pageNum = totalPages - 4 + i;
-                      } else {
-                        // Otherwise show current page and 2 pages on each side
-                        pageNum = currentPage - 2 + i;
-                      }
+                  <nav className="flex items-center">
+                    <button
+                      onClick={() => paginate(Math.max(1, currentPage - 1))}
+                      disabled={currentPage === 1}
+                      className={`px-3 py-1 rounded-l-md ${currentPage === 1 ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
+                    >
+                      Previous
+                    </button>
 
-                      return (
-                        <button
-                          key={pageNum}
-                          onClick={() => paginate(pageNum)}
-                          className={`px-3 py-1 ${currentPage === pageNum ? 'bg-primary text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
-                        >
-                          {pageNum}
-                        </button>
-                      );
-                    })}
-                  </div>
+                    {/* Page numbers */}
+                    <div className="hidden sm:flex">
+                      {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                        // Show pages around current page
+                        let pageNum;
+                        if (totalPages <= 5) {
+                          // If 5 or fewer pages, show all
+                          pageNum = i + 1;
+                        } else if (currentPage <= 3) {
+                          // If near start, show first 5 pages
+                          pageNum = i + 1;
+                        } else if (currentPage >= totalPages - 2) {
+                          // If near end, show last 5 pages
+                          pageNum = totalPages - 4 + i;
+                        } else {
+                          // Otherwise show current page and 2 pages on each side
+                          pageNum = currentPage - 2 + i;
+                        }
 
-                  {/* Current page indicator for mobile */}
-                  <div className="sm:hidden px-3 py-1 bg-gray-100">
-                    {currentPage} / {totalPages}
-                  </div>
+                        return (
+                          <button
+                            key={pageNum}
+                            onClick={() => paginate(pageNum)}
+                            className={`px-3 py-1 ${currentPage === pageNum ? 'bg-primary text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
+                          >
+                            {pageNum}
+                          </button>
+                        );
+                      })}
+                    </div>
 
-                  <button
-                    onClick={() => paginate(Math.min(totalPages, currentPage + 1))}
-                    disabled={currentPage === totalPages || totalPages === 0}
-                    className={`px-3 py-1 rounded-r-md ${currentPage === totalPages || totalPages === 0 ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
-                  >
-                    Next
-                  </button>
-                </nav>
+                    {/* Current page indicator for mobile */}
+                    <div className="sm:hidden px-3 py-1 bg-gray-100">
+                      {currentPage} / {totalPages}
+                    </div>
+
+                    <button
+                      onClick={() => paginate(Math.min(totalPages, currentPage + 1))}
+                      disabled={currentPage === totalPages || totalPages === 0}
+                      className={`px-3 py-1 rounded-r-md ${currentPage === totalPages || totalPages === 0 ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
+                    >
+                      Next
+                    </button>
+                  </nav>
+                </div>
               </div>
-            </div>
-          )}
-        </div>
-      )}
+            )}
+          </div>
+        )}
+      </div>
 
       {/* No additional statistics needed at the bottom */}
     </div>
