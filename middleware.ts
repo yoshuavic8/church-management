@@ -42,6 +42,8 @@ export async function middleware(request: NextRequest) {
     if (
       pathname === "/" ||
       pathname === "/auth/login" ||
+      pathname === "/auth/member/login" ||
+      pathname === "/auth/admin/login" ||
       pathname === "/auth/register" ||
       pathname === "/self-checkin" ||
       pathname.startsWith("/_next") ||
@@ -51,8 +53,26 @@ export async function middleware(request: NextRequest) {
       return res;
     }
 
-    // Redirect to login for all other routes
-    const redirectUrl = new URL("/auth/login", request.url);
+    // Determine appropriate login page based on the route
+    let loginPath = "/auth/member/login";
+
+    // If trying to access admin or staff routes, redirect to admin login
+    if (
+      pathname.startsWith("/admin") ||
+      pathname === "/dashboard" ||
+      pathname.startsWith("/ministries") ||
+      pathname.startsWith("/cell-groups") ||
+      pathname.startsWith("/districts") ||
+      pathname.startsWith("/classes") ||
+      pathname.startsWith("/pastoral") ||
+      pathname.startsWith("/attendance") ||
+      pathname.startsWith("/members")
+    ) {
+      loginPath = "/auth/admin/login";
+    }
+
+    // Redirect to appropriate login page
+    const redirectUrl = new URL(loginPath, request.url);
     redirectUrl.searchParams.set("redirectTo", pathname);
     return NextResponse.redirect(redirectUrl);
   }
@@ -125,13 +145,16 @@ export async function middleware(request: NextRequest) {
 
   // Member routes - only accessible by logged in users
   if (pathname.startsWith("/member") && !session) {
-    return NextResponse.redirect(new URL("/auth/login", request.url));
+    return NextResponse.redirect(new URL("/auth/member/login", request.url));
   }
 
   // If user is logged in and tries to access login/register pages
   if (
     session &&
-    (pathname === "/auth/login" || pathname === "/auth/register")
+    (pathname === "/auth/login" ||
+      pathname === "/auth/member/login" ||
+      pathname === "/auth/admin/login" ||
+      pathname === "/auth/register")
   ) {
     // Redirect to appropriate dashboard based on role level
     if (userRoleLevel >= 4) {

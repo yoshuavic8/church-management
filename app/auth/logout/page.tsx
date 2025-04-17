@@ -49,15 +49,15 @@ export default function Logout() {
         // Wait for either the signOut to complete or the timeout
         await Promise.race([signOutPromise, timeoutPromise]);
 
-        // Redirect to login page
-        router.push('/auth/login');
+        // Redirect to home page
+        router.push('/');
       } catch (error: any) {
         console.error('Error during logout:', error);
         setError(error.message || 'An error occurred during logout');
 
         // Still try to redirect after a delay
         setTimeout(() => {
-          router.push('/auth/login');
+          router.push('/');
         }, 3000);
       }
     };
