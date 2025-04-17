@@ -9,7 +9,7 @@ export default function AdminPage() {
   return (
     <div>
       <h1 className="text-3xl font-bold mb-6">Administration</h1>
-      
+
       <div className="mb-6 border-b border-gray-200">
         <nav className="flex space-x-8">
           <button
@@ -21,6 +21,16 @@ export default function AdminPage() {
             }`}
           >
             Documents
+          </button>
+          <button
+            onClick={() => setActiveTab('content')}
+            className={`py-4 px-1 border-b-2 font-medium text-sm ${
+              activeTab === 'content'
+                ? 'border-primary text-primary'
+                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+            }`}
+          >
+            Content Management
           </button>
           <button
             onClick={() => setActiveTab('users')}
@@ -44,7 +54,7 @@ export default function AdminPage() {
           </button>
         </nav>
       </div>
-      
+
       {activeTab === 'documents' && (
         <div>
           <div className="card">
@@ -52,9 +62,9 @@ export default function AdminPage() {
             <p className="text-gray-600 mb-6">
               Generate official church documents for members. Select a document type below.
             </p>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              <Link 
+              <Link
                 href="/admin/documents/baptism"
                 className="p-4 border rounded-lg hover:bg-gray-50 flex flex-col items-center text-center"
               >
@@ -66,8 +76,8 @@ export default function AdminPage() {
                   Generate baptism certificates for members
                 </p>
               </Link>
-              
-              <Link 
+
+              <Link
                 href="/admin/documents/child-dedication"
                 className="p-4 border rounded-lg hover:bg-gray-50 flex flex-col items-center text-center"
               >
@@ -79,8 +89,8 @@ export default function AdminPage() {
                   Generate child dedication certificates
                 </p>
               </Link>
-              
-              <Link 
+
+              <Link
                 href="/admin/documents/marriage"
                 className="p-4 border rounded-lg hover:bg-gray-50 flex flex-col items-center text-center"
               >
@@ -92,8 +102,8 @@ export default function AdminPage() {
                   Generate marriage certificates
                 </p>
               </Link>
-              
-              <Link 
+
+              <Link
                 href="/admin/documents/membership"
                 className="p-4 border rounded-lg hover:bg-gray-50 flex flex-col items-center text-center"
               >
@@ -105,8 +115,8 @@ export default function AdminPage() {
                   Generate church membership certificates
                 </p>
               </Link>
-              
-              <Link 
+
+              <Link
                 href="/admin/documents/recommendation"
                 className="p-4 border rounded-lg hover:bg-gray-50 flex flex-col items-center text-center"
               >
@@ -118,8 +128,8 @@ export default function AdminPage() {
                   Generate recommendation letters for members
                 </p>
               </Link>
-              
-              <Link 
+
+              <Link
                 href="/admin/documents/custom"
                 className="p-4 border rounded-lg hover:bg-gray-50 flex flex-col items-center text-center"
               >
@@ -133,10 +143,10 @@ export default function AdminPage() {
               </Link>
             </div>
           </div>
-          
+
           <div className="card mt-6">
             <h2 className="text-xl font-semibold mb-4">Recent Documents</h2>
-            
+
             <div className="overflow-x-auto">
               <table className="min-w-full">
                 <thead>
@@ -182,18 +192,138 @@ export default function AdminPage() {
           </div>
         </div>
       )}
-      
+
+      {activeTab === 'content' && (
+        <div>
+          <div className="card">
+            <h2 className="text-xl font-semibold mb-4">Content Management</h2>
+            <p className="text-gray-600 mb-6">
+              Manage content for the church website and member portal.
+            </p>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <Link
+                href="/admin/articles"
+                className="p-4 border rounded-lg hover:bg-gray-50 flex flex-col items-center text-center"
+              >
+                <svg className="w-12 h-12 text-primary mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z"></path>
+                </svg>
+                <h3 className="font-medium">News & Articles</h3>
+                <p className="text-sm text-gray-500 mt-1">
+                  Manage news articles and announcements
+                </p>
+              </Link>
+
+              <Link
+                href="/admin/events"
+                className="p-4 border rounded-lg hover:bg-gray-50 flex flex-col items-center text-center"
+              >
+                <svg className="w-12 h-12 text-primary mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                </svg>
+                <h3 className="font-medium">Events</h3>
+                <p className="text-sm text-gray-500 mt-1">
+                  Manage church events and calendar
+                </p>
+              </Link>
+
+              <Link
+                href="/admin/media"
+                className="p-4 border rounded-lg hover:bg-gray-50 flex flex-col items-center text-center"
+              >
+                <svg className="w-12 h-12 text-primary mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"></path>
+                </svg>
+                <h3 className="font-medium">Media Library</h3>
+                <p className="text-sm text-gray-500 mt-1">
+                  Manage images, videos, and sermons
+                </p>
+              </Link>
+            </div>
+          </div>
+
+          <div className="card mt-6">
+            <h2 className="text-xl font-semibold mb-4">Recent Articles</h2>
+
+            <div className="overflow-x-auto">
+              <table className="min-w-full">
+                <thead>
+                  <tr className="bg-gray-50">
+                    <th className="py-2 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Title</th>
+                    <th className="py-2 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
+                    <th className="py-2 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                    <th className="py-2 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Published</th>
+                    <th className="py-2 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  <tr>
+                    <td className="py-3 px-4">Welcome to Our New Website</td>
+                    <td className="py-3 px-4">Announcements</td>
+                    <td className="py-3 px-4">
+                      <span className="px-2 py-1 rounded-full text-xs bg-green-100 text-green-800">
+                        Published
+                      </span>
+                    </td>
+                    <td className="py-3 px-4">Apr 15, 2023</td>
+                    <td className="py-3 px-4">
+                      <Link href="/admin/articles/edit/1" className="text-primary hover:underline mr-2">Edit</Link>
+                      <button className="text-red-600 hover:underline">Delete</button>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td className="py-3 px-4">Upcoming Youth Retreat</td>
+                    <td className="py-3 px-4">Events</td>
+                    <td className="py-3 px-4">
+                      <span className="px-2 py-1 rounded-full text-xs bg-green-100 text-green-800">
+                        Published
+                      </span>
+                    </td>
+                    <td className="py-3 px-4">Apr 12, 2023</td>
+                    <td className="py-3 px-4">
+                      <Link href="/admin/articles/edit/2" className="text-primary hover:underline mr-2">Edit</Link>
+                      <button className="text-red-600 hover:underline">Delete</button>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td className="py-3 px-4">Easter Service Schedule</td>
+                    <td className="py-3 px-4">Announcements</td>
+                    <td className="py-3 px-4">
+                      <span className="px-2 py-1 rounded-full text-xs bg-yellow-100 text-yellow-800">
+                        Draft
+                      </span>
+                    </td>
+                    <td className="py-3 px-4">-</td>
+                    <td className="py-3 px-4">
+                      <Link href="/admin/articles/edit/3" className="text-primary hover:underline mr-2">Edit</Link>
+                      <button className="text-red-600 hover:underline">Delete</button>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div className="mt-4 text-center">
+              <Link href="/admin/articles" className="text-primary hover:underline">
+                View All Articles →
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
+
       {activeTab === 'users' && (
         <div className="card">
           <h2 className="text-xl font-semibold mb-4">User Management</h2>
           <p className="text-gray-600 mb-6">
             Manage user accounts and permissions for the church management system.
           </p>
-          
+
           <div className="flex justify-end mb-4">
             <button className="btn-primary">Add New User</button>
           </div>
-          
+
           <div className="overflow-x-auto">
             <table className="min-w-full">
               <thead>
@@ -253,14 +383,14 @@ export default function AdminPage() {
           </div>
         </div>
       )}
-      
+
       {activeTab === 'settings' && (
         <div className="card">
           <h2 className="text-xl font-semibold mb-4">System Settings</h2>
           <p className="text-gray-600 mb-6">
             Configure system settings for the church management application.
           </p>
-          
+
           <div className="space-y-6">
             <div>
               <h3 className="text-lg font-medium mb-3">Church Information</h3>
@@ -276,7 +406,7 @@ export default function AdminPage() {
                     defaultValue="Grace Community Church"
                   />
                 </div>
-                
+
                 <div>
                   <label htmlFor="church_email" className="block text-sm font-medium text-gray-700 mb-1">
                     Email
@@ -288,7 +418,7 @@ export default function AdminPage() {
                     defaultValue="info@gracechurch.org"
                   />
                 </div>
-                
+
                 <div>
                   <label htmlFor="church_phone" className="block text-sm font-medium text-gray-700 mb-1">
                     Phone
@@ -300,7 +430,7 @@ export default function AdminPage() {
                     defaultValue="123-456-7890"
                   />
                 </div>
-                
+
                 <div>
                   <label htmlFor="church_website" className="block text-sm font-medium text-gray-700 mb-1">
                     Website
@@ -312,7 +442,7 @@ export default function AdminPage() {
                     defaultValue="https://gracechurch.org"
                   />
                 </div>
-                
+
                 <div className="md:col-span-2">
                   <label htmlFor="church_address" className="block text-sm font-medium text-gray-700 mb-1">
                     Address
@@ -326,7 +456,7 @@ export default function AdminPage() {
                 </div>
               </div>
             </div>
-            
+
             <div>
               <h3 className="text-lg font-medium mb-3">System Preferences</h3>
               <div className="space-y-3">
@@ -341,7 +471,7 @@ export default function AdminPage() {
                     Enable email notifications
                   </label>
                 </div>
-                
+
                 <div className="flex items-center">
                   <input
                     id="sms_notifications"
@@ -352,7 +482,7 @@ export default function AdminPage() {
                     Enable SMS notifications
                   </label>
                 </div>
-                
+
                 <div className="flex items-center">
                   <input
                     id="auto_backup"
@@ -366,7 +496,7 @@ export default function AdminPage() {
                 </div>
               </div>
             </div>
-            
+
             <div className="flex justify-end">
               <button className="btn-primary">Save Settings</button>
             </div>

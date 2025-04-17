@@ -19,7 +19,7 @@ export default function Login() {
 
     try {
       const supabase = getSupabaseClient();
-      const { error } = await supabase.auth.signInWithPassword({
+      const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
@@ -28,7 +28,37 @@ export default function Login() {
         throw error;
       }
 
-      router.push('/dashboard');
+      // Get user role
+      const { data: userData, error: userError } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', data.user?.id)
+        .single();
+
+      if (userError && userError.code !== 'PGRST116') {
+        throw userError;
+      }
+
+      // Default to member role if not found
+      const role = userData?.role || 'member';
+
+      // Update user metadata with role
+      await supabase.auth.updateUser({
+        data: { role }
+      });
+
+      // Check if there's a redirect URL in the query parameters
+      const searchParams = new URLSearchParams(window.location.search);
+      const redirectTo = searchParams.get('redirectTo');
+
+      // Redirect based on role or redirectTo parameter
+      if (redirectTo) {
+        router.push(redirectTo);
+      } else if (role === 'admin') {
+        router.push('/dashboard');
+      } else {
+        router.push('/member/dashboard');
+      }
     } catch (error: any) {
       setError(error.message || 'An error occurred during login');
     } finally {
