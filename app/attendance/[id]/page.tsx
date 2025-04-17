@@ -329,6 +329,18 @@ export default function AttendanceDetailPage() {
         </div>
       </div>
 
+      <div className="mb-6">
+        <Link
+          href={`/attendance/${id}/realtime`}
+          className="btn-primary flex items-center justify-center w-full md:w-auto"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+          </svg>
+          View Realtime Dashboard & Self Check-in
+        </Link>
+      </div>
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="card">
           <h2 className="text-xl font-semibold mb-4">Members Attendance</h2>
