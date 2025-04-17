@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { getSupabaseClient } from '../lib/supabase';
 import Header from '../components/Header';
@@ -23,7 +23,7 @@ type ScannedMember = Member & {
   scannedAt: Date;
 };
 
-export default function ScanPage() {
+function ScanPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const memberId = searchParams.get('member');
@@ -59,24 +59,24 @@ export default function ScanPage() {
       setLoadingContexts(true);
       try {
         const supabase = getSupabaseClient();
-        
+
         if (eventCategory === 'cell_group') {
           const { data, error } = await supabase
             .from('cell_groups')
             .select('id, name')
             .eq('status', 'active')
             .order('name');
-            
+
           if (error) throw error;
           setContextOptions(data || []);
-        } 
+        }
         else if (eventCategory === 'ministry') {
           const { data, error } = await supabase
             .from('ministries')
             .select('id, name')
             .eq('status', 'active')
             .order('name');
-            
+
           if (error) throw error;
           setContextOptions(data || []);
         }
@@ -99,14 +99,14 @@ export default function ScanPage() {
   const handleScan = async (decodedText: string) => {
     try {
       setScanError(null);
-      
+
       // Validate the scanned text is a UUID
       const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
       if (!uuidRegex.test(decodedText)) {
         setScanError('Invalid QR code format');
         return;
       }
-      
+
       // Check if member already scanned
       const alreadyScanned = scannedMembers.some(member => member.id === decodedText);
       if (alreadyScanned) {
@@ -114,7 +114,7 @@ export default function ScanPage() {
         setTimeout(() => setScanSuccess(null), 2000);
         return;
       }
-      
+
       // Fetch member details
       const supabase = getSupabaseClient();
       const { data, error } = await supabase
@@ -122,31 +122,31 @@ export default function ScanPage() {
         .select('id, first_name, last_name, status')
         .eq('id', decodedText)
         .single();
-        
+
       if (error) throw error;
-      
+
       if (!data) {
         setScanError('Member not found');
         return;
       }
-      
+
       if (data.status !== 'active') {
         setScanError('Member is not active');
         return;
       }
-      
+
       // Add to scanned members
       const newScannedMember: ScannedMember = {
         ...data,
         scannedAt: new Date()
       };
-      
+
       setScannedMembers(prev => [...prev, newScannedMember]);
       setScanSuccess(`${data.first_name} ${data.last_name} checked in!`);
-      
+
       // Clear success message after 2 seconds
       setTimeout(() => setScanSuccess(null), 2000);
-      
+
     } catch (error: any) {
       console.error('Error processing scan:', error);
       setScanError(error.message || 'Error processing scan');
@@ -159,7 +159,7 @@ export default function ScanPage() {
       setScanError('Please enter a member ID');
       return;
     }
-    
+
     await handleScan(memberId);
   };
 
@@ -169,26 +169,26 @@ export default function ScanPage() {
       setSaveError(`Please select a ${eventCategory === 'cell_group' ? 'cell group' : 'ministry'}`);
       return;
     }
-    
+
     if (!meetingDate) {
       setSaveError('Please select a meeting date');
       return;
     }
-    
+
     if (scannedMembers.length === 0) {
       setSaveError('No members scanned yet');
       return;
     }
-    
+
     try {
       setIsSaving(true);
       setSaveError(null);
-      
+
       const supabase = getSupabaseClient();
-      
+
       // Parse offering value to float if provided
       const offeringValue = offering ? parseFloat(offering) : null;
-      
+
       // Prepare meeting record based on event category
       const meetingRecord: any = {
         event_category: eventCategory,
@@ -199,48 +199,48 @@ export default function ScanPage() {
         location,
         offering: offeringValue,
       };
-      
+
       // Add the appropriate context ID based on event category
       if (eventCategory === 'cell_group') {
         meetingRecord.cell_group_id = selectedContextId;
       } else if (eventCategory === 'ministry') {
         meetingRecord.ministry_id = selectedContextId;
       }
-      
+
       // 1. Create the meeting record
       const { data: meetingData, error: meetingError } = await supabase
         .from('attendance_meetings')
         .insert(meetingRecord)
         .select();
-      
+
       if (meetingError) throw meetingError;
-      
+
       if (!meetingData || meetingData.length === 0) {
         throw new Error('Failed to create meeting record');
       }
-      
+
       const meetingId = meetingData[0].id;
-      
+
       // 2. Record participants
       const participantRecords = scannedMembers.map(member => ({
         meeting_id: meetingId,
         member_id: member.id,
         status: 'present',
       }));
-      
+
       const { error: participantsError } = await supabase
         .from('attendance_participants')
         .insert(participantRecords);
-      
+
       if (participantsError) throw participantsError;
-      
+
       setSaveSuccess(true);
-      
+
       // Redirect to attendance details page after a short delay
       setTimeout(() => {
         router.push(`/attendance/${meetingId}`);
       }, 1500);
-      
+
     } catch (error: any) {
       console.error('Error saving attendance:', error);
       setSaveError(error.message || 'Failed to save attendance record');
@@ -267,54 +267,54 @@ export default function ScanPage() {
 
   return (
     <div>
-      <Header 
-        title="Quick Attendance Scanner" 
+      <Header
+        title="Quick Attendance Scanner"
         backTo="/attendance"
         backLabel="Attendance"
       />
-      
+
       {saveSuccess && (
         <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-4">
           Attendance recorded successfully! Redirecting...
         </div>
       )}
-      
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Left Column - Scanner and Scanned Members */}
         <div>
           <div className="card mb-6">
             <h2 className="text-xl font-semibold mb-4">QR Code Scanner</h2>
-            
+
             {scanError && (
               <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-2 rounded mb-4">
                 {scanError}
               </div>
             )}
-            
+
             {scanSuccess && (
               <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-2 rounded mb-4">
                 {scanSuccess}
               </div>
             )}
-            
-            <QRCodeScanner 
+
+            <QRCodeScanner
               onScan={handleScan}
               onError={(error) => setScanError(error)}
               width={300}
               height={300}
               className="mb-4"
             />
-            
+
             <div className="mt-4">
               <h3 className="text-md font-medium mb-2">Manual Entry</h3>
               <div className="flex">
-                <input 
-                  type="text" 
-                  placeholder="Enter Member ID" 
+                <input
+                  type="text"
+                  placeholder="Enter Member ID"
                   className="input-field flex-grow"
                   id="manualMemberId"
                 />
-                <button 
+                <button
                   onClick={() => handleManualInput((document.getElementById('manualMemberId') as HTMLInputElement).value)}
                   className="ml-2 px-4 py-2 bg-primary text-white rounded-md hover:bg-primary-dark"
                 >
@@ -323,7 +323,7 @@ export default function ScanPage() {
               </div>
             </div>
           </div>
-          
+
           <div className="card">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-semibold">Scanned Members</h2>
@@ -331,7 +331,7 @@ export default function ScanPage() {
                 {scannedMembers.length} members
               </span>
             </div>
-            
+
             {scannedMembers.length === 0 ? (
               <div className="text-center py-8 text-gray-500">
                 <p>No members scanned yet</p>
@@ -359,7 +359,7 @@ export default function ScanPage() {
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                          <button 
+                          <button
                             onClick={() => handleRemoveMember(member.id)}
                             className="text-red-600 hover:text-red-900"
                           >
@@ -374,18 +374,18 @@ export default function ScanPage() {
             )}
           </div>
         </div>
-        
+
         {/* Right Column - Meeting Details */}
         <div>
           <div className="card">
             <h2 className="text-xl font-semibold mb-4">Meeting Details</h2>
-            
+
             {saveError && (
               <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
                 {saveError}
               </div>
             )}
-            
+
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -404,7 +404,7 @@ export default function ScanPage() {
                   <option value="other">Other Event</option>
                 </select>
               </div>
-              
+
               {(eventCategory === 'cell_group' || eventCategory === 'ministry') && (
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -425,7 +425,7 @@ export default function ScanPage() {
                   </select>
                 </div>
               )}
-              
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Meeting Date *
@@ -438,7 +438,7 @@ export default function ScanPage() {
                   disabled={isSaving}
                 />
               </div>
-              
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Meeting Type
@@ -456,7 +456,7 @@ export default function ScanPage() {
                   <option value="other">Other</option>
                 </select>
               </div>
-              
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Topic/Theme
@@ -470,7 +470,7 @@ export default function ScanPage() {
                   disabled={isSaving}
                 />
               </div>
-              
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Location
@@ -484,7 +484,7 @@ export default function ScanPage() {
                   disabled={isSaving}
                 />
               </div>
-              
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Offering Amount
@@ -505,7 +505,7 @@ export default function ScanPage() {
                   />
                 </div>
               </div>
-              
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Notes
@@ -519,7 +519,7 @@ export default function ScanPage() {
                   disabled={isSaving}
                 ></textarea>
               </div>
-              
+
               <div className="pt-4">
                 <button
                   onClick={handleSaveAttendance}
@@ -534,5 +534,15 @@ export default function ScanPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function ScanPage() {
+  return (
+    <Suspense fallback={<div className="flex justify-center items-center h-64">
+      <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+    </div>}>
+      <ScanPageContent />
+    </Suspense>
   );
 }
