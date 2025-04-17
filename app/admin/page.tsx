@@ -327,8 +327,11 @@ export default function AdminPage() {
             <Link href="/admin/roles" className="btn-secondary">
               Manage Roles
             </Link>
-            <Link href="/admin/sync-users" className="btn-primary">
+            <Link href="/admin/sync-users" className="btn-secondary">
               Sync Auth Users
+            </Link>
+            <Link href="/admin/fix-role" className="btn-primary">
+              Fix Admin Role
             </Link>
           </div>
 

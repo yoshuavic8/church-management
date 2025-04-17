@@ -71,10 +71,20 @@ export default function Login() {
       const metadataRole = userMetadata?.role;
       const metadataRoleLevel = userMetadata?.role_level;
 
+      // Log all role information for debugging
+      console.log('User data from members table:', userData);
+      console.log('User metadata from auth:', userMetadata);
+
       // Use role from members table, metadata, or default to 'member'
+      // For role level, explicitly convert to number to ensure correct type
       const role = userData?.role || metadataRole || 'member';
-      const roleLevel = userData?.role_level || metadataRoleLevel || 1;
+      const roleLevel = userData?.role_level ? Number(userData.role_level) :
+                       metadataRoleLevel ? Number(metadataRoleLevel) : 1;
       const roleContext = userData?.role_context || userMetadata?.role_context || null;
+
+      // Log final role information
+      console.log('Final role:', role);
+      console.log('Final role level:', roleLevel);
 
       // If user exists in auth but not in members table, create a member record
       if (!userData && data.user) {

@@ -58,8 +58,25 @@ export async function middleware(request: NextRequest) {
 
   // Get user role level from session
   const userMetadata = session.user?.user_metadata || {};
-  const userRoleLevel = Number(userMetadata.role_level) || 1;
+
+  // Log user metadata for debugging
+  console.log("User metadata in middleware:", userMetadata);
+
+  // Ensure role level is properly converted to number
+  let userRoleLevel = 1; // Default to member
+  if (userMetadata.role_level) {
+    userRoleLevel = Number(userMetadata.role_level);
+    console.log("Role level from metadata:", userRoleLevel);
+  }
+
+  // Also check if user has admin role string
   const userRole = userMetadata.role || "member";
+  if (userRole === "admin" && userRoleLevel < 4) {
+    userRoleLevel = 4; // Ensure admin role gets admin level
+    console.log("Upgraded to admin level based on role string");
+  }
+
+  console.log("Final role level in middleware:", userRoleLevel);
 
   // Admin-only routes (level 4)
   if (
