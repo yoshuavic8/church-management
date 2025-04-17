@@ -321,7 +321,9 @@ export default function AdminPage() {
           </p>
 
           <div className="flex justify-end mb-4">
-            <button className="btn-primary">Add New User</button>
+            <Link href="/admin/users" className="btn-primary">
+              Manage Users & Roles
+            </Link>
           </div>
 
           <div className="overflow-x-auto">

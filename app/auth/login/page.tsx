@@ -28,19 +28,24 @@ export default function Login() {
         throw error;
       }
 
-      // Get user role
+      // Get user role from members table
       const { data: userData, error: userError } = await supabase
-        .from('profiles')
+        .from('members')
         .select('role')
         .eq('id', data.user?.id)
-        .single();
+        .maybeSingle();
 
-      if (userError && userError.code !== 'PGRST116') {
-        throw userError;
+      if (userError) {
+        console.error('Error fetching user role:', userError);
+        // Continue with default role
       }
 
-      // Default to member role if not found
-      const role = userData?.role || 'member';
+      // Check if user has role in metadata
+      const userMetadata = data.user?.user_metadata;
+      const metadataRole = userMetadata?.role;
+
+      // Use role from members table, metadata, or default to 'member'
+      const role = userData?.role || metadataRole || 'member';
 
       // Update user metadata with role
       await supabase.auth.updateUser({
