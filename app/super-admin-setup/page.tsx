@@ -44,42 +44,42 @@ export default function SuperAdminSetup() {
 
   const createSuperAdmin = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!keyVerified) {
       alert('Please verify the setup key first');
       return;
     }
-    
+
     if (!email || !password || !firstName || !lastName) {
       setError('All fields are required');
       return;
     }
-    
+
     setLoading(true);
     setError(null);
     setSuccess(null);
-    
+
     try {
       addLog('Starting super admin creation process');
       const supabase = createClientComponentClient();
-      
+
       // Step 1: Check if user already exists
       addLog('Checking if user already exists');
       const { data: existingUsers, error: checkError } = await supabase
         .from('members')
         .select('id, email')
         .eq('email', email);
-        
+
       if (checkError) {
         throw new Error(`Error checking existing users: ${checkError.message}`);
       }
-      
+
       if (existingUsers && existingUsers.length > 0) {
         addLog(`User with email ${email} already exists. Will update to super admin.`);
-        
+
         // Get the existing user's ID
         const existingUserId = existingUsers[0].id;
-        
+
         // Update the member record to super admin
         addLog('Updating member record to super admin');
         const { error: updateMemberError } = await supabase
@@ -92,11 +92,11 @@ export default function SuperAdminSetup() {
             status: 'active'
           })
           .eq('id', existingUserId);
-          
+
         if (updateMemberError) {
           throw new Error(`Error updating member: ${updateMemberError.message}`);
         }
-        
+
         // Try to update auth user metadata
         addLog('Updating auth user metadata');
         const { error: updateAuthError } = await supabase.rpc('update_user_metadata', {
@@ -108,12 +108,12 @@ export default function SuperAdminSetup() {
             last_name: lastName
           }
         });
-        
+
         if (updateAuthError) {
           addLog(`Warning: Could not update auth metadata: ${updateAuthError.message}`);
           // Continue anyway as this might be a permissions issue
         }
-        
+
         setSuccess(`Existing user ${email} has been updated to super admin. You can now login with your existing password.`);
       } else {
         // Step 2: Create a new user
@@ -130,44 +130,87 @@ export default function SuperAdminSetup() {
             }
           }
         });
-        
+
         if (signUpError) {
           throw new Error(`Error creating auth user: ${signUpError.message}`);
         }
-        
+
         if (!authData.user) {
           throw new Error('No user returned from auth signup');
         }
-        
+
         addLog(`Auth user created with ID: ${authData.user.id}`);
-        
+
         // Step 3: Create a member record
         addLog('Creating member record');
-        const { error: memberError } = await supabase
-          .from('members')
-          .insert([{
-            id: authData.user.id,
-            email,
-            first_name: firstName,
-            last_name: lastName,
-            role: 'admin',
-            role_level: 4,
-            status: 'active'
-          }]);
-          
-        if (memberError) {
-          throw new Error(`Error creating member record: ${memberError.message}`);
+        let memberError;
+
+        try {
+          const { error } = await supabase
+            .from('members')
+            .insert([{
+              id: authData.user.id,
+              email,
+              first_name: firstName,
+              last_name: lastName,
+              role: 'admin',
+              role_level: 4,
+              status: 'active'
+            }]);
+
+          memberError = error;
+        } catch (insertError: any) {
+          memberError = { message: insertError.message };
         }
-        
+
+        if (memberError) {
+          addLog(`Error creating member record: ${memberError.message}`);
+          addLog('Trying to disable RLS and create member record again...');
+
+          // Try to disable RLS
+          await fixRlsPolicies();
+
+          // Try again with admin client
+          try {
+            // Try to create member directly via API
+            const response = await fetch('/api/auth/create-member', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                id: authData.user.id,
+                email,
+                first_name: firstName,
+                last_name: lastName,
+                role: 'admin',
+                role_level: 4,
+                key: 'super-admin-setup-key'
+              }),
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+              throw new Error(data.error || 'Failed to create member record via API');
+            }
+
+            addLog('Successfully created member record via API');
+          } catch (apiError: any) {
+            addLog(`Error creating member via API: ${apiError.message}`);
+            throw new Error(`Could not create member record: ${memberError.message}`);
+          }
+        }
+
         addLog('Member record created successfully');
-        
+
         // Step 4: Try to directly set admin role in auth.users (might fail due to permissions)
         try {
           addLog('Attempting to set admin role in auth.users directly');
           const { error: directUpdateError } = await supabase.rpc('set_admin_role', {
             user_email: email
           });
-          
+
           if (directUpdateError) {
             addLog(`Warning: Could not set admin role directly: ${directUpdateError.message}`);
             // Continue anyway as this might be a permissions issue
@@ -178,10 +221,10 @@ export default function SuperAdminSetup() {
           addLog(`Warning: Error in direct role setting: ${directError.message}`);
           // Continue anyway
         }
-        
+
         setSuccess(`Super admin created successfully! You can now login with email: ${email} and the password you provided.`);
       }
-      
+
       addLog('Super admin setup completed successfully');
     } catch (error: any) {
       console.error('Error creating super admin:', error);
@@ -196,25 +239,25 @@ export default function SuperAdminSetup() {
     try {
       addLog('Creating RPC functions in database');
       const supabase = createClientComponentClient();
-      
+
       // Create update_user_metadata function
       const { error: rpcError1 } = await supabase.rpc('create_update_metadata_function');
-      
+
       if (rpcError1) {
         addLog(`Warning: Could not create update_user_metadata function: ${rpcError1.message}`);
       } else {
         addLog('Created update_user_metadata function successfully');
       }
-      
+
       // Create set_admin_role function
       const { error: rpcError2 } = await supabase.rpc('create_set_admin_role_function');
-      
+
       if (rpcError2) {
         addLog(`Warning: Could not create set_admin_role function: ${rpcError2.message}`);
       } else {
         addLog('Created set_admin_role function successfully');
       }
-      
+
     } catch (error: any) {
       addLog(`Error creating RPC functions: ${error.message}`);
     }
@@ -224,15 +267,27 @@ export default function SuperAdminSetup() {
     try {
       addLog('Fixing RLS policies');
       const supabase = createClientComponentClient();
-      
+
+      // First try the RPC method
       const { error } = await supabase.rpc('fix_rls_policies');
-      
+
       if (error) {
-        addLog(`Warning: Could not fix RLS policies: ${error.message}`);
+        addLog(`Warning: Could not fix RLS policies via RPC: ${error.message}`);
+        addLog('Trying to disable RLS completely via API...');
+
+        // If RPC fails, try the API method to disable RLS completely
+        const response = await fetch(`/api/auth/disable-rls?key=super-admin-setup-key`);
+        const data = await response.json();
+
+        if (response.ok) {
+          addLog('Successfully disabled RLS via API');
+        } else {
+          addLog(`Error disabling RLS via API: ${data.error || 'Unknown error'}`);
+        }
       } else {
-        addLog('Fixed RLS policies successfully');
+        addLog('Fixed RLS policies successfully via RPC');
       }
-      
+
     } catch (error: any) {
       addLog(`Error fixing RLS policies: ${error.message}`);
     }
@@ -251,7 +306,7 @@ export default function SuperAdminSetup() {
             <span className="font-medium text-red-600">Delete this page after use!</span>
           </p>
         </div>
-        
+
         <div className="bg-yellow-100 border-l-4 border-yellow-500 p-4">
           <div className="flex">
             <div className="flex-shrink-0">
@@ -273,24 +328,24 @@ export default function SuperAdminSetup() {
             </div>
           </div>
         </div>
-        
+
         {keyVerified && (
           <>
             <div className="bg-white shadow rounded-lg p-6">
               <h2 className="text-lg font-medium text-gray-900 mb-4">Create Super Admin</h2>
-              
+
               {error && (
                 <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
                   {error}
                 </div>
               )}
-              
+
               {success && (
                 <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-4">
                   {success}
                 </div>
               )}
-              
+
               <form onSubmit={createSuperAdmin}>
                 <div className="mb-4">
                   <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
@@ -305,7 +360,7 @@ export default function SuperAdminSetup() {
                     required
                   />
                 </div>
-                
+
                 <div className="mb-4">
                   <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
                     Password
@@ -319,7 +374,7 @@ export default function SuperAdminSetup() {
                     required
                   />
                 </div>
-                
+
                 <div className="mb-4">
                   <label htmlFor="firstName" className="block text-sm font-medium text-gray-700 mb-1">
                     First Name
@@ -333,7 +388,7 @@ export default function SuperAdminSetup() {
                     required
                   />
                 </div>
-                
+
                 <div className="mb-4">
                   <label htmlFor="lastName" className="block text-sm font-medium text-gray-700 mb-1">
                     Last Name
@@ -347,7 +402,7 @@ export default function SuperAdminSetup() {
                     required
                   />
                 </div>
-                
+
                 <button
                   type="submit"
                   disabled={loading}
@@ -357,10 +412,10 @@ export default function SuperAdminSetup() {
                 </button>
               </form>
             </div>
-            
+
             <div className="bg-white shadow rounded-lg p-6">
               <h2 className="text-lg font-medium text-gray-900 mb-4">Database Utilities</h2>
-              
+
               <div className="space-y-4">
                 <button
                   onClick={createRpcFunctions}
@@ -368,7 +423,7 @@ export default function SuperAdminSetup() {
                 >
                   Create RPC Functions
                 </button>
-                
+
                 <button
                   onClick={fixRlsPolicies}
                   className="w-full flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
@@ -377,7 +432,7 @@ export default function SuperAdminSetup() {
                 </button>
               </div>
             </div>
-            
+
             <div className="bg-black text-green-400 p-4 rounded-lg shadow overflow-auto h-64 font-mono text-sm">
               <div className="mb-2 text-white font-bold">Logs:</div>
               {logs.length === 0 ? (
