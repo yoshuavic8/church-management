@@ -193,13 +193,28 @@ export default function AdminLogin() {
 
       console.log('Redirecting to:', redirectPath);
 
-      // Force a hard navigation to ensure middleware processes the request properly
-      window.location.href = redirectPath;
+      console.log('Current URL:', window.location.href);
+      console.log('Current origin:', window.location.origin);
 
-      // As a fallback, also use the router
+      // Determine if we're in production or development
+      const isProduction = window.location.origin.includes('vercel.app') ||
+                          window.location.origin.includes('church-management');
+
+      // Use relative path for navigation to avoid CORS issues
+      const relativePath = redirectPath.startsWith('/') ? redirectPath : `/${redirectPath}`;
+
+      console.log('Is production environment:', isProduction);
+      console.log('Using relative path for navigation:', relativePath);
+
+      // Force a hard navigation to ensure middleware processes the request properly
+      // Use relative URL to avoid CORS issues
+      window.location.href = relativePath;
+
+      // As a fallback, also use the router with a delay
       setTimeout(() => {
-        router.replace(redirectPath);
-      }, 100);
+        console.log('Fallback navigation with router');
+        router.replace(relativePath);
+      }, 500);
     } catch (error: any) {
       console.error('Login error:', error);
 

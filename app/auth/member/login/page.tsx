@@ -155,11 +155,34 @@ export default function MemberLogin() {
       const redirectTo = searchParams.get('redirectTo');
 
       // For member login, always redirect to member dashboard
+      let redirectPath = '/member/dashboard';
       if (redirectTo && redirectTo.startsWith('/member')) {
-        router.push(redirectTo);
-      } else {
-        router.push('/member/dashboard');
+        redirectPath = redirectTo;
       }
+
+      console.log('Redirecting to:', redirectPath);
+      console.log('Current URL:', window.location.href);
+      console.log('Current origin:', window.location.origin);
+
+      // Determine if we're in production or development
+      const isProduction = window.location.origin.includes('vercel.app') ||
+                          window.location.origin.includes('church-management');
+
+      // Use relative path for navigation to avoid CORS issues
+      const relativePath = redirectPath.startsWith('/') ? redirectPath : `/${redirectPath}`;
+
+      console.log('Is production environment:', isProduction);
+      console.log('Using relative path for navigation:', relativePath);
+
+      // Force a hard navigation to ensure middleware processes the request properly
+      // Use relative URL to avoid CORS issues
+      window.location.href = relativePath;
+
+      // As a fallback, also use the router with a delay
+      setTimeout(() => {
+        console.log('Fallback navigation with router');
+        router.replace(relativePath);
+      }, 500);
     } catch (error: any) {
       console.error('Login error:', error);
 

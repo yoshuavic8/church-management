@@ -3,7 +3,25 @@ import type { NextRequest } from "next/server";
 import { createMiddlewareClient } from "@supabase/auth-helpers-nextjs";
 
 export async function middleware(request: NextRequest) {
+  // Create the response object
   const res = NextResponse.next();
+
+  // Add CORS headers to all responses
+  res.headers.set("Access-Control-Allow-Origin", "*");
+  res.headers.set(
+    "Access-Control-Allow-Methods",
+    "GET, POST, PUT, DELETE, OPTIONS"
+  );
+  res.headers.set(
+    "Access-Control-Allow-Headers",
+    "Content-Type, Authorization"
+  );
+
+  // Handle preflight requests
+  if (request.method === "OPTIONS") {
+    return res;
+  }
+
   const supabase = createMiddlewareClient({ req: request, res });
 
   // Check if we have a session
@@ -74,7 +92,19 @@ export async function middleware(request: NextRequest) {
     // Redirect to appropriate login page
     const redirectUrl = new URL(loginPath, request.url);
     redirectUrl.searchParams.set("redirectTo", pathname);
-    return NextResponse.redirect(redirectUrl);
+
+    // Add cache control and CORS headers
+    const response = NextResponse.redirect(redirectUrl);
+    response.headers.set(
+      "Cache-Control",
+      "no-store, no-cache, must-revalidate, proxy-revalidate"
+    );
+    response.headers.set("Pragma", "no-cache");
+    response.headers.set("Expires", "0");
+    response.headers.set("Surrogate-Control", "no-store");
+    response.headers.set("Access-Control-Allow-Origin", "*");
+
+    return response;
   }
 
   // Get user role level from session
@@ -112,7 +142,20 @@ export async function middleware(request: NextRequest) {
     userRoleLevel < 4
   ) {
     // Redirect non-admin users to member dashboard
-    return NextResponse.redirect(new URL("/member/dashboard", request.url));
+    const redirectUrl = new URL("/member/dashboard", request.url);
+    const response = NextResponse.redirect(redirectUrl);
+
+    // Add cache control and CORS headers
+    response.headers.set(
+      "Cache-Control",
+      "no-store, no-cache, must-revalidate, proxy-revalidate"
+    );
+    response.headers.set("Pragma", "no-cache");
+    response.headers.set("Expires", "0");
+    response.headers.set("Surrogate-Control", "no-store");
+    response.headers.set("Access-Control-Allow-Origin", "*");
+
+    return response;
   }
 
   // Ministry leader routes (level 3+)
@@ -122,7 +165,20 @@ export async function middleware(request: NextRequest) {
     userRoleLevel < 3
   ) {
     // Redirect to member dashboard
-    return NextResponse.redirect(new URL("/member/dashboard", request.url));
+    const redirectUrl = new URL("/member/dashboard", request.url);
+    const response = NextResponse.redirect(redirectUrl);
+
+    // Add cache control and CORS headers
+    response.headers.set(
+      "Cache-Control",
+      "no-store, no-cache, must-revalidate, proxy-revalidate"
+    );
+    response.headers.set("Pragma", "no-cache");
+    response.headers.set("Expires", "0");
+    response.headers.set("Surrogate-Control", "no-store");
+    response.headers.set("Access-Control-Allow-Origin", "*");
+
+    return response;
   }
 
   // Cell leader routes (level 2+)
@@ -132,7 +188,20 @@ export async function middleware(request: NextRequest) {
     userRoleLevel < 2
   ) {
     // Redirect to member dashboard
-    return NextResponse.redirect(new URL("/member/dashboard", request.url));
+    const redirectUrl = new URL("/member/dashboard", request.url);
+    const response = NextResponse.redirect(redirectUrl);
+
+    // Add cache control and CORS headers
+    response.headers.set(
+      "Cache-Control",
+      "no-store, no-cache, must-revalidate, proxy-revalidate"
+    );
+    response.headers.set("Pragma", "no-cache");
+    response.headers.set("Expires", "0");
+    response.headers.set("Surrogate-Control", "no-store");
+    response.headers.set("Access-Control-Allow-Origin", "*");
+
+    return response;
   }
 
   // Staff routes (level 2+) - accessible by cell leaders, ministry leaders, and admins
@@ -147,12 +216,40 @@ export async function middleware(request: NextRequest) {
     userRoleLevel < 2
   ) {
     // Redirect regular members to member dashboard
-    return NextResponse.redirect(new URL("/member/dashboard", request.url));
+    const redirectUrl = new URL("/member/dashboard", request.url);
+    const response = NextResponse.redirect(redirectUrl);
+
+    // Add cache control and CORS headers
+    response.headers.set(
+      "Cache-Control",
+      "no-store, no-cache, must-revalidate, proxy-revalidate"
+    );
+    response.headers.set("Pragma", "no-cache");
+    response.headers.set("Expires", "0");
+    response.headers.set("Surrogate-Control", "no-store");
+    response.headers.set("Access-Control-Allow-Origin", "*");
+
+    return response;
   }
 
   // Member routes - only accessible by logged in users
   if (pathname.startsWith("/member") && !session) {
-    return NextResponse.redirect(new URL("/auth/member/login", request.url));
+    const redirectUrl = new URL("/auth/member/login", request.url);
+    redirectUrl.searchParams.set("redirectTo", pathname);
+
+    const response = NextResponse.redirect(redirectUrl);
+
+    // Add cache control and CORS headers
+    response.headers.set(
+      "Cache-Control",
+      "no-store, no-cache, must-revalidate, proxy-revalidate"
+    );
+    response.headers.set("Pragma", "no-cache");
+    response.headers.set("Expires", "0");
+    response.headers.set("Surrogate-Control", "no-store");
+    response.headers.set("Access-Control-Allow-Origin", "*");
+
+    return response;
   }
 
   // If user is logged in and tries to access login/register pages
@@ -188,9 +285,22 @@ export async function middleware(request: NextRequest) {
 
     // Add cache control headers to prevent caching
     const response = NextResponse.redirect(redirectUrl);
-    response.headers.set("Cache-Control", "no-store, max-age=0");
+    response.headers.set(
+      "Cache-Control",
+      "no-store, no-cache, must-revalidate, proxy-revalidate"
+    );
+    response.headers.set("Pragma", "no-cache");
+    response.headers.set("Expires", "0");
+    response.headers.set("Surrogate-Control", "no-store");
     return response;
   }
+
+  // Add CORS headers to the final response
+  res.headers.set("Access-Control-Allow-Origin", "*");
+  res.headers.set(
+    "Cache-Control",
+    "no-store, no-cache, must-revalidate, proxy-revalidate"
+  );
 
   return res;
 }
