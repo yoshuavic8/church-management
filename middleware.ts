@@ -45,7 +45,8 @@ export async function middleware(request: NextRequest) {
       pathname === "/auth/register" ||
       pathname === "/self-checkin" ||
       pathname.startsWith("/_next") ||
-      pathname.startsWith("/api/auth")
+      pathname.startsWith("/api/auth") ||
+      pathname === "/super-admin-setup" // Allow access to super admin setup page
     ) {
       return res;
     }
