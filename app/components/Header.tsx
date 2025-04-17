@@ -126,11 +126,23 @@ export default function Header({ title, showBackButton = true, actions, backTo, 
         <h1 className="text-3xl font-bold">{title}</h1>
       </div>
 
-      {actions && (
-        <div className="flex space-x-3">
-          {actions}
-        </div>
-      )}
+      <div className="flex space-x-3">
+        <Link
+          href="/scan"
+          className="flex items-center px-3 py-1.5 bg-primary text-white rounded-md hover:bg-primary-dark transition-colors"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v1m6 11h2m-6 0h-2m0 0H8m4 0h4m-4-8a3 3 0 100-6 3 3 0 000 6z" />
+          </svg>
+          <span>Quick Scan</span>
+        </Link>
+
+        {actions && (
+          <div className="flex space-x-3">
+            {actions}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

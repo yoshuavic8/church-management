@@ -5,6 +5,8 @@ import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { getSupabaseClient } from '../../lib/supabase';
 import Header from '../../components/Header';
+import QRCodeGenerator from '../../components/QRCodeGenerator';
+import { useRef } from 'react';
 
 type Member = {
   id: string;
@@ -263,6 +265,28 @@ export default function MemberDetailPage() {
           </div>
 
           <div className="card mt-6">
+            <h2 className="text-xl font-semibold mb-4">Member QR Code</h2>
+            <div className="flex flex-col items-center">
+              <QRCodeGenerator
+                value={member.id}
+                size={180}
+                level="H"
+                className="mb-3"
+              />
+              <p className="text-sm text-gray-500 text-center mb-2">Scan this code for quick attendance</p>
+              <button
+                onClick={() => window.print()}
+                className="px-3 py-1 bg-primary text-white rounded-md text-sm hover:bg-primary-dark flex items-center"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                </svg>
+                Print QR Code
+              </button>
+            </div>
+          </div>
+
+          <div className="card mt-6">
             <h2 className="text-xl font-semibold mb-4">Actions</h2>
             <div className="space-y-2">
               <Link href={`/pastoral/visit/new?member=${member.id}`} className="text-primary hover:underline block">
@@ -270,6 +294,9 @@ export default function MemberDetailPage() {
               </Link>
               <Link href={`/attendance?member=${member.id}`} className="text-primary hover:underline block">
                 View Attendance History
+              </Link>
+              <Link href={`/scan?member=${member.id}`} className="text-primary hover:underline block font-medium">
+                Quick Attendance Check-in
               </Link>
               <Link href={`/admin/documents/generate?member=${member.id}`} className="text-primary hover:underline block">
                 Generate Documents
