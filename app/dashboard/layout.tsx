@@ -26,6 +26,9 @@ export default function DashboardLayout({
           <Link href="/districts" className="block py-2 px-4 rounded hover:bg-white/10">
             Districts
           </Link>
+          <Link href="/ministries" className="block py-2 px-4 rounded hover:bg-white/10">
+            Ministries
+          </Link>
           <Link href="/classes" className="block py-2 px-4 rounded hover:bg-white/10">
             Classes
           </Link>

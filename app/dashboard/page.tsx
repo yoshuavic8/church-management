@@ -10,6 +10,7 @@ type DashboardStats = {
   totalMembers: number;
   totalCellGroups: number;
   totalDistricts: number;
+  totalMinistries: number;
   totalClasses: number;
   upcomingServices: number;
 };
@@ -20,6 +21,7 @@ function DashboardContent() {
     totalMembers: 0,
     totalCellGroups: 0,
     totalDistricts: 0,
+    totalMinistries: 0,
     totalClasses: 0,
     upcomingServices: 0,
   });
@@ -50,11 +52,18 @@ function DashboardContent() {
 
         if (districtsError) throw districtsError;
 
+        const { count: ministriesCount, error: ministriesError } = await supabase
+          .from('ministries')
+          .select('*', { count: 'exact', head: true });
+
+        if (ministriesError) throw ministriesError;
+
         // For now, we'll keep using placeholder data for classes and services
         setStats({
           totalMembers: membersCount || 0,
           totalCellGroups: cellGroupsCount || 0,
           totalDistricts: districtsCount || 0,
+          totalMinistries: ministriesCount || 0,
           totalClasses: 5, // Placeholder
           upcomingServices: 8, // Placeholder
         });
@@ -108,6 +117,12 @@ function DashboardContent() {
           <p className="text-sm text-gray-500 mt-2">Click to manage districts</p>
         </Link>
 
+        <Link href="/ministries" className="card bg-white shadow-md rounded-lg p-6 hover:shadow-lg transition-shadow">
+          <h2 className="text-lg font-semibold text-gray-700">Ministries</h2>
+          <p className="text-3xl font-bold text-primary mt-2">{stats.totalMinistries}</p>
+          <p className="text-sm text-gray-500 mt-2">Click to manage ministries</p>
+        </Link>
+
         <div className="card bg-white shadow-md rounded-lg p-6">
           <h2 className="text-lg font-semibold text-gray-700">Active Classes</h2>
           <p className="text-3xl font-bold text-primary mt-2">{stats.totalClasses}</p>
@@ -132,6 +147,9 @@ function DashboardContent() {
             </Link>
             <Link href="/districts/add" className="btn-primary text-center">
               Add New District
+            </Link>
+            <Link href="/ministries/add" className="btn-primary text-center">
+              Add New Ministry
             </Link>
             <Link href="/attendance/record" className="btn-primary text-center">
               Record Attendance

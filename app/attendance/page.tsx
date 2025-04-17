@@ -5,15 +5,22 @@ import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { getSupabaseClient } from '../lib/supabase';
 import Header from '../components/Header';
+import { EventCategory } from '../types/ministry';
 
 type AttendanceRecord = {
   id: string;
   meeting_date: string;
   meeting_type: string;
-  cell_group_id: string;
-  cell_group: {
+  event_category: EventCategory;
+  cell_group_id: string | null;
+  ministry_id: string | null;
+  cell_group?: {
     name: string;
   };
+  ministry?: {
+    name: string;
+  };
+  context_name: string; // Unified name for the context (cell group, ministry, etc.)
   topic: string;
   notes: string;
   present_count: number;
@@ -36,6 +43,7 @@ function AttendanceContent() {
   const [filter, setFilter] = useState('all');
   const [timeFilter, setTimeFilter] = useState('all'); // 'all', 'week', 'month', 'quarter', 'year'
   const [cellGroupFilter, setCellGroupFilter] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState<EventCategory | 'all'>('all');
 
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -84,18 +92,21 @@ function AttendanceContent() {
           }
         }
 
-        // Fetch attendance meetings with cell group info
+        // Fetch attendance meetings with context info (cell group or ministry)
         let query = supabase
           .from('attendance_meetings')
           .select(`
             id,
             meeting_date,
             meeting_type,
+            event_category,
             topic,
             notes,
             offering,
             cell_group_id,
-            cell_group:cell_group_id (name)
+            ministry_id,
+            cell_group:cell_group_id (name),
+            ministry:ministry_id (name)
           `)
           .order('meeting_date', { ascending: false });
 
@@ -173,46 +184,82 @@ function AttendanceContent() {
           // Calculate total count (all participants)
           const totalCount = (presentCount || 0) + (absentCount || 0) + (lateCount || 0) + (excusedCount || 0);
 
-          // Process cell group data properly
-          let cellGroupName = 'Unknown';
+          // Process context data (cell group or ministry)
+          let contextName = 'Unknown';
+          let cellGroupData = null;
+          let ministryData = null;
 
-          // Handle if cell_group is an array
-          if (Array.isArray(meeting.cell_group) && meeting.cell_group.length > 0) {
-            cellGroupName = meeting.cell_group[0]?.name || 'Unknown';
-          }
-          // Handle if cell_group is an object
-          else if (meeting.cell_group && typeof meeting.cell_group === 'object') {
-            cellGroupName = meeting.cell_group.name || 'Unknown';
-          }
+          // Determine event category, defaulting to 'cell_group' for backward compatibility
+          const eventCategory = meeting.event_category || 'cell_group';
 
-          // If still unknown, try to fetch the cell group name directly
-          if (cellGroupName === 'Unknown' && meeting.cell_group_id) {
-            try {
-              const { data: cellGroupData } = await supabase
-                .from('cell_groups')
-                .select('name')
-                .eq('id', meeting.cell_group_id)
-                .single();
+          if (eventCategory === 'cell_group' && meeting.cell_group_id) {
+            // Process cell group data
+            if (Array.isArray(meeting.cell_group) && meeting.cell_group.length > 0) {
+              contextName = meeting.cell_group[0]?.name || 'Unknown';
+              cellGroupData = { name: contextName };
+            } else if (meeting.cell_group && typeof meeting.cell_group === 'object') {
+              contextName = meeting.cell_group.name || 'Unknown';
+              cellGroupData = { name: contextName };
+            } else {
+              // If still unknown, try to fetch the cell group name directly
+              try {
+                const { data: cgData } = await supabase
+                  .from('cell_groups')
+                  .select('name')
+                  .eq('id', meeting.cell_group_id)
+                  .single();
 
-              if (cellGroupData && cellGroupData.name) {
-                cellGroupName = cellGroupData.name;
+                if (cgData && cgData.name) {
+                  contextName = cgData.name;
+                  cellGroupData = { name: contextName };
+                }
+              } catch (error) {
+                console.error('Error fetching cell group name:', error);
               }
-            } catch (error) {
-              console.error('Error fetching cell group name:', error);
             }
-          }
+          } else if (eventCategory === 'ministry' && meeting.ministry_id) {
+            // Process ministry data
+            if (Array.isArray(meeting.ministry) && meeting.ministry.length > 0) {
+              contextName = meeting.ministry[0]?.name || 'Unknown';
+              ministryData = { name: contextName };
+            } else if (meeting.ministry && typeof meeting.ministry === 'object') {
+              contextName = meeting.ministry.name || 'Unknown';
+              ministryData = { name: contextName };
+            } else {
+              // If still unknown, try to fetch the ministry name directly
+              try {
+                const { data: minData } = await supabase
+                  .from('ministries')
+                  .select('name')
+                  .eq('id', meeting.ministry_id)
+                  .single();
 
-          const cellGroupData = { name: cellGroupName };
+                if (minData && minData.name) {
+                  contextName = minData.name;
+                  ministryData = { name: contextName };
+                }
+              } catch (error) {
+                console.error('Error fetching ministry name:', error);
+              }
+            }
+          } else {
+            // For other event categories, use a generic name based on the meeting type
+            contextName = getMeetingTypeLabel(meeting.meeting_type);
+          }
 
           return {
             id: meeting.id,
             meeting_date: meeting.meeting_date,
             meeting_type: meeting.meeting_type,
+            event_category: eventCategory as EventCategory,
             topic: meeting.topic,
             notes: meeting.notes,
             offering: meeting.offering,
             cell_group_id: meeting.cell_group_id,
+            ministry_id: meeting.ministry_id,
             cell_group: cellGroupData,
+            ministry: ministryData,
+            context_name: contextName,
             present_count: presentCount || 0,
             absent_count: absentCount || 0,
             late_count: lateCount || 0,
@@ -244,7 +291,7 @@ function AttendanceContent() {
     if (records.length > 0) {
       calculateStats(records);
     }
-  }, [timeFilter, filter, cellGroupFilter, records]);
+  }, [timeFilter, filter, cellGroupFilter, categoryFilter, records]);
 
   // Function to calculate statistics based on filtered records
   const calculateStats = (attendanceRecords: AttendanceRecord[]) => {
@@ -261,10 +308,15 @@ function AttendanceContent() {
       filteredRecords = filteredRecords.filter(record => record.meeting_type === filter);
     }
 
-    // Apply cell group filter
+    // Apply event category filter
+    if (categoryFilter !== 'all') {
+      filteredRecords = filteredRecords.filter(record => record.event_category === categoryFilter);
+    }
+
+    // Apply context name filter (cell group or ministry)
     if (cellGroupFilter) {
       filteredRecords = filteredRecords.filter(record =>
-        record.cell_group.name.toLowerCase().includes(cellGroupFilter.toLowerCase())
+        record.context_name.toLowerCase().includes(cellGroupFilter.toLowerCase())
       );
     }
 
@@ -277,47 +329,47 @@ function AttendanceContent() {
 
     // Calculate advanced statistics
 
-    // 1. Most active cell group (most meetings)
-    const cellGroupMeetingCounts = filteredRecords.reduce((counts, record) => {
-      const cellGroupName = record.cell_group.name;
-      counts[cellGroupName] = (counts[cellGroupName] || 0) + 1;
+    // 1. Most active context (most meetings)
+    const contextMeetingCounts = filteredRecords.reduce((counts, record) => {
+      const contextName = record.context_name;
+      counts[contextName] = (counts[contextName] || 0) + 1;
       return counts;
     }, {} as Record<string, number>);
 
     let mostActiveCellGroup = { name: '', count: 0 };
-    Object.entries(cellGroupMeetingCounts).forEach(([name, count]) => {
+    Object.entries(contextMeetingCounts).forEach(([name, count]) => {
       if (count > mostActiveCellGroup.count) {
         mostActiveCellGroup = { name, count };
       }
     });
 
-    // 2. Cell group with most visitors
-    const cellGroupVisitorCounts = filteredRecords.reduce((counts, record) => {
-      const cellGroupName = record.cell_group.name;
-      counts[cellGroupName] = (counts[cellGroupName] || 0) + record.visitor_count;
+    // 2. Context with most visitors
+    const contextVisitorCounts = filteredRecords.reduce((counts, record) => {
+      const contextName = record.context_name;
+      counts[contextName] = (counts[contextName] || 0) + record.visitor_count;
       return counts;
     }, {} as Record<string, number>);
 
     let mostVisitorsCellGroup = { name: '', count: 0 };
-    Object.entries(cellGroupVisitorCounts).forEach(([name, count]) => {
+    Object.entries(contextVisitorCounts).forEach(([name, count]) => {
       if (count > mostVisitorsCellGroup.count) {
         mostVisitorsCellGroup = { name, count };
       }
     });
 
-    // 3. Cell group with highest attendance rate
-    const cellGroupAttendanceRates = filteredRecords.reduce((rates, record) => {
-      const cellGroupName = record.cell_group.name;
-      if (!rates[cellGroupName]) {
-        rates[cellGroupName] = { present: 0, total: 0 };
+    // 3. Context with highest attendance rate
+    const contextAttendanceRates = filteredRecords.reduce((rates, record) => {
+      const contextName = record.context_name;
+      if (!rates[contextName]) {
+        rates[contextName] = { present: 0, total: 0 };
       }
-      rates[cellGroupName].present += record.present_count;
-      rates[cellGroupName].total += record.total_count;
+      rates[contextName].present += record.present_count;
+      rates[contextName].total += record.total_count;
       return rates;
     }, {} as Record<string, { present: number, total: number }>);
 
     let highestAttendanceRate = { name: '', rate: 0 };
-    Object.entries(cellGroupAttendanceRates).forEach(([name, data]) => {
+    Object.entries(contextAttendanceRates).forEach(([name, data]) => {
       if (data.total > 0) {
         const rate = Math.round((data.present / data.total) * 100);
         if (rate > highestAttendanceRate.rate) {
@@ -386,11 +438,14 @@ function AttendanceContent() {
     // Apply time filter
     const timeFilterMatch = timeFilter === 'all' || isWithinTimeFilter(record.meeting_date, timeFilter);
 
-    // Apply cell group filter
-    const cellGroupMatch = !cellGroupFilter ||
-      record.cell_group.name.toLowerCase().includes(cellGroupFilter.toLowerCase());
+    // Apply event category filter
+    const categoryMatch = categoryFilter === 'all' || record.event_category === categoryFilter;
 
-    return meetingTypeMatch && timeFilterMatch && cellGroupMatch;
+    // Apply context name filter (cell group or ministry)
+    const contextMatch = !cellGroupFilter ||
+      record.context_name.toLowerCase().includes(cellGroupFilter.toLowerCase());
+
+    return meetingTypeMatch && timeFilterMatch && categoryMatch && contextMatch;
   });
 
   // Pagination logic
@@ -405,7 +460,7 @@ function AttendanceContent() {
   // Reset to first page when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [filter, timeFilter, cellGroupFilter]);
+  }, [filter, timeFilter, cellGroupFilter, categoryFilter]);
 
   // Helper function to check if a date is within the selected time filter
   function isWithinTimeFilter(dateString: string, filter: string): boolean {
@@ -467,6 +522,25 @@ function AttendanceContent() {
         return 'Prayer Meeting';
       default:
         return type.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase());
+    }
+  };
+
+  const getCategoryLabel = (category: EventCategory | 'all') => {
+    switch (category) {
+      case 'all':
+        return 'All Categories';
+      case 'cell_group':
+        return 'Cell Group';
+      case 'ministry':
+        return 'Ministry';
+      case 'prayer':
+        return 'Prayer Meeting';
+      case 'service':
+        return 'Church Service';
+      case 'other':
+        return 'Other Event';
+      default:
+        return category.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase());
     }
   };
 
@@ -609,12 +683,12 @@ function AttendanceContent() {
         <div className="mb-4">
           <h3 className="text-lg font-medium mb-2">Filters</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Cell Group Filter */}
+            {/* Context Filter */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Cell Group</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Context Name</label>
               <input
                 type="text"
-                placeholder="Search cell group..."
+                placeholder="Search cell group, ministry, etc..."
                 className="input-field"
                 value={cellGroupFilter}
                 onChange={(e) => setCellGroupFilter(e.target.value)}
@@ -657,6 +731,49 @@ function AttendanceContent() {
                 </button>
               </div>
             </div>
+          </div>
+        </div>
+
+        {/* Event Category Filter */}
+        <div className="mb-4">
+          <h3 className="text-lg font-medium mb-2">Event Category</h3>
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={() => setCategoryFilter('all')}
+              className={`px-3 py-1 rounded-md ${categoryFilter === 'all' ? 'bg-primary text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+            >
+              All Categories
+            </button>
+            <button
+              onClick={() => setCategoryFilter('cell_group')}
+              className={`px-3 py-1 rounded-md ${categoryFilter === 'cell_group' ? 'bg-primary text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+            >
+              Cell Group
+            </button>
+            <button
+              onClick={() => setCategoryFilter('ministry')}
+              className={`px-3 py-1 rounded-md ${categoryFilter === 'ministry' ? 'bg-primary text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+            >
+              Ministry
+            </button>
+            <button
+              onClick={() => setCategoryFilter('prayer')}
+              className={`px-3 py-1 rounded-md ${categoryFilter === 'prayer' ? 'bg-primary text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+            >
+              Prayer Meeting
+            </button>
+            <button
+              onClick={() => setCategoryFilter('service')}
+              className={`px-3 py-1 rounded-md ${categoryFilter === 'service' ? 'bg-primary text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+            >
+              Church Service
+            </button>
+            <button
+              onClick={() => setCategoryFilter('other')}
+              className={`px-3 py-1 rounded-md ${categoryFilter === 'other' ? 'bg-primary text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+            >
+              Other Event
+            </button>
           </div>
         </div>
 
@@ -736,16 +853,23 @@ function AttendanceContent() {
 
           {cellGroupFilter && (
             <span className="px-2 py-1 bg-purple-100 text-purple-800 rounded-full text-xs">
-              Cell Group: {cellGroupFilter}
+              Context: {cellGroupFilter}
             </span>
           )}
 
-          {(filter !== 'all' || timeFilter !== 'all' || cellGroupFilter) && (
+          {categoryFilter !== 'all' && (
+            <span className="px-2 py-1 bg-indigo-100 text-indigo-800 rounded-full text-xs">
+              Category: {getCategoryLabel(categoryFilter)}
+            </span>
+          )}
+
+          {(filter !== 'all' || timeFilter !== 'all' || cellGroupFilter || categoryFilter !== 'all') && (
             <button
               onClick={() => {
                 setFilter('all');
                 setTimeFilter('all');
                 setCellGroupFilter('');
+                setCategoryFilter('all');
               }}
               className="px-2 py-1 bg-gray-100 text-gray-700 rounded-full text-xs hover:bg-gray-200"
             >
@@ -769,7 +893,7 @@ function AttendanceContent() {
             <thead className="bg-gray-100">
               <tr>
                 <th className="py-3 px-4 text-left">Date</th>
-                <th className="py-3 px-4 text-left">Cell Group</th>
+                <th className="py-3 px-4 text-left">Context</th>
                 <th className="py-3 px-4 text-left">Type</th>
                 <th className="py-3 px-4 text-left">Topic</th>
                 <th className="py-3 px-4 text-right">Present</th>
@@ -787,7 +911,7 @@ function AttendanceContent() {
                   <td className="py-3 px-4">
                     {new Date(record.meeting_date).toLocaleDateString()}
                   </td>
-                  <td className="py-3 px-4">{record.cell_group.name}</td>
+                  <td className="py-3 px-4">{record.context_name}</td>
                   <td className="py-3 px-4">{getMeetingTypeLabel(record.meeting_type)}</td>
                   <td className="py-3 px-4">{record.topic || '-'}</td>
                   <td className="py-3 px-4 text-right font-medium text-green-600">{record.present_count}</td>
@@ -826,6 +950,7 @@ function AttendanceContent() {
                             setFilter('all');
                             setTimeFilter('all');
                             setCellGroupFilter('');
+                            setCategoryFilter('all');
                           }}
                           className="px-3 py-1 bg-gray-100 text-gray-700 rounded-md text-sm hover:bg-gray-200"
                         >

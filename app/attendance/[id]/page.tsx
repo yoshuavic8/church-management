@@ -418,11 +418,7 @@ export default function AttendanceDetailPage() {
         </div>
       </div>
 
-      <div className="flex justify-end mt-6">
-        <Link href="/attendance" className="btn-secondary">
-          Back to Attendance List
-        </Link>
-      </div>
+      {/* Tombol back sudah ada di header */}
     </div>
   );
 }

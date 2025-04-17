@@ -4,6 +4,9 @@ import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { getSupabaseClient } from '../../lib/supabase';
 import Header from '../../components/Header';
+import EventCategorySelector from '../components/EventCategorySelector';
+import ContextSelector from '../components/ContextSelector';
+import { EventCategory } from '../../types/ministry';
 
 type CellGroup = {
   id: string;
@@ -39,10 +42,25 @@ function RecordAttendanceContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const cellGroupIdParam = searchParams.get('cell_group');
+  const ministryIdParam = searchParams.get('ministry');
 
-  const [cellGroups, setCellGroups] = useState<CellGroup[]>([]);
+  // Determine initial event category based on URL parameters
+  const getInitialEventCategory = (): EventCategory => {
+    if (cellGroupIdParam) return 'cell_group';
+    if (ministryIdParam) return 'ministry';
+    return 'cell_group'; // Default to cell group
+  };
+
+  // Determine initial context ID based on URL parameters
+  const getInitialContextId = (): string => {
+    if (cellGroupIdParam) return cellGroupIdParam;
+    if (ministryIdParam) return ministryIdParam;
+    return '';
+  };
+
+  const [eventCategory, setEventCategory] = useState<EventCategory>(getInitialEventCategory());
+  const [contextId, setContextId] = useState<string>(getInitialContextId());
   const [members, setMembers] = useState<Member[]>([]);
-  const [selectedCellGroup, setSelectedCellGroup] = useState<string>(cellGroupIdParam || '');
   const [meetingDate, setMeetingDate] = useState<string>(new Date().toISOString().split('T')[0]);
   const [meetingType, setMeetingType] = useState<string>('regular');
   const [topic, setTopic] = useState<string>('');
@@ -63,26 +81,24 @@ function RecordAttendanceContent() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<boolean>(false);
 
-  // Fetch cell groups and members
+  // Fetch members based on event category and context
   useEffect(() => {
     const fetchData = async () => {
       try {
         setLoading(true);
-        const supabase = getSupabaseClient();
 
-        // Fetch cell groups
-        const { data: cellGroupsData, error: cellGroupsError } = await supabase
-          .from('cell_groups')
-          .select('id, name')
-          .eq('status', 'active')
-          .order('name');
-
-        if (cellGroupsError) throw cellGroupsError;
-        setCellGroups(cellGroupsData || []);
-
-        // If cell group is selected (either from URL or state), fetch its members
-        if (selectedCellGroup) {
-          await fetchCellGroupMembers(selectedCellGroup);
+        // If context is selected, fetch its members
+        if (contextId) {
+          if (eventCategory === 'cell_group') {
+            await fetchCellGroupMembers(contextId);
+          } else if (eventCategory === 'ministry') {
+            await fetchMinistryMembers(contextId);
+          } else {
+            // For other event types, we might not have predefined members
+            setMembers([]);
+            setParticipants([]);
+            setLoading(false);
+          }
         } else {
           setLoading(false);
         }
@@ -94,7 +110,7 @@ function RecordAttendanceContent() {
     };
 
     fetchData();
-  }, []);
+  }, [eventCategory, contextId]);
 
   // Fetch cell group members when a cell group is selected
   const fetchCellGroupMembers = async (cellGroupId: string) => {
@@ -186,17 +202,75 @@ function RecordAttendanceContent() {
     }
   };
 
-  // Handle cell group selection change
-  const handleCellGroupChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const cellGroupId = e.target.value;
-    setSelectedCellGroup(cellGroupId);
+  // Fetch ministry members
+  const fetchMinistryMembers = async (ministryId: string) => {
+    try {
+      setLoading(true);
+      const supabase = getSupabaseClient();
 
-    if (cellGroupId) {
-      await fetchCellGroupMembers(cellGroupId);
-    } else {
-      setMembers([]);
-      setParticipants([]);
+      // Get all members in this ministry
+      const { data: ministryMembers, error: membersError } = await supabase
+        .from('ministry_members')
+        .select(`
+          member_id,
+          members:member_id (
+            id,
+            first_name,
+            last_name,
+            status
+          )
+        `)
+        .eq('ministry_id', ministryId)
+        .eq('status', 'active');
+
+      if (membersError) throw membersError;
+
+      // Format members data
+      const allMemberData = (ministryMembers || []).map(item => {
+        // Check if item.members is an array or an object
+        const memberData = Array.isArray(item.members) ? item.members[0] : item.members;
+        return {
+          id: memberData.id,
+          first_name: memberData.first_name,
+          last_name: memberData.last_name,
+          status: memberData.status
+        } as Member;
+      });
+
+      // Filter out inactive members
+      const activeMembers = allMemberData.filter(member => member.status === 'active');
+
+      setMembers(activeMembers);
+
+      // Initialize participants with all active members
+      const initialParticipants: Participant[] = activeMembers.map(member => ({
+        member_id: member.id,
+        first_name: member.first_name,
+        last_name: member.last_name,
+        status: 'present', // Default to present
+        isRegistered: true,
+      }));
+
+      setParticipants(initialParticipants);
+      setLoading(false);
+    } catch (error: any) {
+      console.error('Error fetching ministry members:', error);
+      setError(error.message || 'Failed to load ministry members');
+      setLoading(false);
     }
+  };
+
+  // Handle event category change
+  const handleEventCategoryChange = (category: EventCategory) => {
+    setEventCategory(category);
+    setContextId(''); // Reset context when category changes
+    setMembers([]);
+    setParticipants([]);
+  };
+
+  // Handle context selection change
+  const handleContextChange = (newContextId: string) => {
+    setContextId(newContextId);
   };
 
   // Handle participant status change
@@ -239,8 +313,8 @@ function RecordAttendanceContent() {
 
   // Save attendance record
   const handleSaveAttendance = async () => {
-    if (!selectedCellGroup) {
-      setError('Please select a cell group');
+    if (!contextId) {
+      setError(`Please select a ${getCategoryContextLabel(eventCategory)}`);
       return;
     }
 
@@ -257,18 +331,28 @@ function RecordAttendanceContent() {
       // Parse offering value to float if provided
       const offeringValue = offering ? parseFloat(offering) : null;
 
+      // Prepare meeting record based on event category
+      const meetingRecord: any = {
+        event_category: eventCategory,
+        meeting_date: meetingDate,
+        meeting_type: meetingType,
+        topic,
+        notes,
+        location,
+        offering: offeringValue,
+      };
+
+      // Add the appropriate context ID based on event category
+      if (eventCategory === 'cell_group') {
+        meetingRecord.cell_group_id = contextId;
+      } else if (eventCategory === 'ministry') {
+        meetingRecord.ministry_id = contextId;
+      }
+
       // 1. Create the meeting record
       const { data: meetingData, error: meetingError } = await supabase
         .from('attendance_meetings')
-        .insert({
-          cell_group_id: selectedCellGroup,
-          meeting_date: meetingDate,
-          meeting_type: meetingType,
-          topic,
-          notes,
-          location,
-          offering: offeringValue,
-        })
+        .insert(meetingRecord)
         .select();
 
       if (meetingError) throw meetingError;
@@ -345,25 +429,21 @@ function RecordAttendanceContent() {
         <h2 className="text-xl font-semibold mb-4">Meeting Details</h2>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-          <div>
-            <label htmlFor="cell_group" className="block text-sm font-medium text-gray-700 mb-1">
-              Cell Group *
-            </label>
-            <select
-              id="cell_group"
-              value={selectedCellGroup}
-              onChange={handleCellGroupChange}
-              className="input-field"
+          <div className="md:col-span-2">
+            <EventCategorySelector
+              value={eventCategory}
+              onChange={handleEventCategoryChange}
               disabled={loading || saving || success}
-              required
-            >
-              <option value="">Select Cell Group</option>
-              {cellGroups.map(group => (
-                <option key={group.id} value={group.id}>
-                  {group.name}
-                </option>
-              ))}
-            </select>
+            />
+          </div>
+
+          <div className="md:col-span-2">
+            <ContextSelector
+              category={eventCategory}
+              value={contextId}
+              onChange={handleContextChange}
+              disabled={loading || saving || success}
+            />
           </div>
 
           <div>
@@ -695,7 +775,7 @@ function RecordAttendanceContent() {
               type="button"
               onClick={handleSaveAttendance}
               className="btn-primary"
-              disabled={!selectedCellGroup || saving || success}
+              disabled={!contextId || saving || success}
             >
               {saving ? 'Saving...' : 'Save Attendance Record'}
             </button>
@@ -704,6 +784,17 @@ function RecordAttendanceContent() {
       )}
     </div>
   );
+}
+
+// Helper function to get appropriate label for context
+function getCategoryContextLabel(category: EventCategory): string {
+  switch (category) {
+    case 'cell_group': return 'Cell Group';
+    case 'ministry': return 'Ministry';
+    case 'prayer': return 'Prayer Type';
+    case 'service': return 'Service Type';
+    default: return 'Event Type';
+  }
 }
 
 // Page component with Suspense boundary
