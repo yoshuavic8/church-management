@@ -555,12 +555,12 @@ function RecordAttendanceContent() {
         </div>
       ) : (
         <>
-          {selectedCellGroup && (
+          {contextId && (
             <div className="card mb-6">
               <h2 className="text-xl font-semibold mb-4">Attendance</h2>
 
               {participants.length === 0 ? (
-                <p className="text-gray-500">No members found in this cell group.</p>
+                <p className="text-gray-500">No members found in this {eventCategory === 'cell_group' ? 'cell group' : eventCategory === 'ministry' ? 'ministry' : 'context'}.</p>
               ) : (
                 <div className="overflow-x-auto">
                   <table className="min-w-full divide-y divide-gray-200">
@@ -643,7 +643,7 @@ function RecordAttendanceContent() {
             </div>
           )}
 
-          {selectedCellGroup && (
+          {contextId && (
             <div className="card mb-6">
               <h2 className="text-xl font-semibold mb-4">New Visitors</h2>
 
