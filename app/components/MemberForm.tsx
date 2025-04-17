@@ -47,6 +47,8 @@ export default function MemberForm({ initialData = {}, mode }: MemberFormProps) 
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+  const [showPasswordInfo, setShowPasswordInfo] = useState(false);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -88,39 +90,84 @@ export default function MemberForm({ initialData = {}, mode }: MemberFormProps) 
       const isConvertingVisitor = initialData.visitor_id ? true : false;
 
       if (mode === 'add') {
-        // Insert new member
+        // Validate email is provided for new members
+        if (!formData.email) {
+          throw new Error('Email is required to create a member account');
+        }
+
+        // Check if email already exists in auth system
+        const { data: existingUsers, error: userCheckError } = await supabase
+          .from('members')
+          .select('email')
+          .eq('email', formData.email);
+
+        if (userCheckError) throw userCheckError;
+
+        if (existingUsers && existingUsers.length > 0) {
+          throw new Error('A member with this email already exists');
+        }
+
+        // Create a UUID for the new member
+        const memberId = crypto.randomUUID();
+
+        // Insert new member with the generated ID
         const { error } = await supabase
           .from('members')
-          .insert([dataToSubmit]);
+          .insert([{
+            id: memberId,
+            ...dataToSubmit
+          }]);
 
         if (error) throw error;
+
+        // Create auth user
+        const { error: authError } = await supabase.auth.admin.createUser({
+          email: formData.email,
+          email_confirm: true,
+          user_metadata: { role: 'member' },
+          user_id: memberId
+        });
+
+        if (authError) {
+          // If auth user creation fails, we should delete the member record
+          await supabase
+            .from('members')
+            .delete()
+            .eq('id', memberId);
+
+          throw authError;
+        }
+
+        // Send password reset email
+        const { error: resetError } = await supabase.auth.resetPasswordForEmail(
+          formData.email,
+          { redirectTo: `${window.location.origin}/auth/reset-password` }
+        );
+
+        if (resetError) {
+          console.error('Error sending password reset email:', resetError);
+          // Don't throw here, as the member was already created successfully
+          setShowPasswordInfo(true);
+        } else {
+          setSuccess('Member created successfully. Password reset email has been sent to ' + formData.email);
+        }
 
         console.log('Member added successfully');
 
         // If converting from visitor, update the visitor record
         if (isConvertingVisitor && initialData.visitor_id) {
-          const { data: memberData } = await supabase
-            .from('members')
-            .select('id')
-            .order('created_at', { ascending: false })
-            .limit(1);
+          // Update the visitor record to mark as converted
+          const { error: visitorError } = await supabase
+            .from('attendance_visitors')
+            .update({
+              converted_to_member_id: memberId,
+              converted_at: new Date().toISOString()
+            })
+            .eq('id', initialData.visitor_id);
 
-          if (memberData && memberData.length > 0) {
-            const newMemberId = memberData[0].id;
-
-            // Update the visitor record to mark as converted
-            const { error: visitorError } = await supabase
-              .from('attendance_visitors')
-              .update({
-                converted_to_member_id: newMemberId,
-                converted_at: new Date().toISOString()
-              })
-              .eq('id', initialData.visitor_id);
-
-            if (visitorError) {
-              console.error('Error updating visitor record:', visitorError);
-              // Don't throw here, as the member was already created successfully
-            }
+          if (visitorError) {
+            console.error('Error updating visitor record:', visitorError);
+            // Don't throw here, as the member was already created successfully
           }
         }
       } else {
@@ -135,8 +182,14 @@ export default function MemberForm({ initialData = {}, mode }: MemberFormProps) 
         console.log('Member updated successfully');
       }
 
-      // Redirect to members list
-      router.push('/members');
+      // Show success message and delay redirect
+      if (success) {
+        setTimeout(() => {
+          router.push('/members');
+        }, 3000);
+      } else {
+        router.push('/members');
+      }
     } catch (error: any) {
       setError(error.message || 'An error occurred');
     } finally {
@@ -149,6 +202,19 @@ export default function MemberForm({ initialData = {}, mode }: MemberFormProps) 
       {error && (
         <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
           {error}
+        </div>
+      )}
+
+      {success && (
+        <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded">
+          {success}
+        </div>
+      )}
+
+      {showPasswordInfo && (
+        <div className="bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded">
+          <p>Member created successfully, but there was an issue sending the password reset email.</p>
+          <p>Please use the "Reset Password" feature in the members list to send a password reset email manually.</p>
         </div>
       )}
 
@@ -185,15 +251,17 @@ export default function MemberForm({ initialData = {}, mode }: MemberFormProps) 
 
         <div>
           <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-            Email
+            Email {mode === 'add' && '*'}
           </label>
           <input
             id="email"
             name="email"
             type="email"
+            required={mode === 'add'}
             value={formData.email}
             onChange={handleChange}
             className="input-field"
+            placeholder={mode === 'add' ? 'Required for account creation' : ''}
           />
         </div>
 

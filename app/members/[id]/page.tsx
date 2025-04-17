@@ -33,6 +33,9 @@ export default function MemberDetailPage() {
   const [cellGroup, setCellGroup] = useState<{id: string, name: string} | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [resetPasswordLoading, setResetPasswordLoading] = useState(false);
+  const [resetPasswordSuccess, setResetPasswordSuccess] = useState(false);
+  const [resetPasswordError, setResetPasswordError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchMemberData = async () => {
@@ -124,11 +127,43 @@ export default function MemberDetailPage() {
     return new Date(dateString).toLocaleDateString();
   };
 
+  const handleResetPassword = async () => {
+    if (!member.email) {
+      setResetPasswordError('This member does not have an email address. Please add an email address first.');
+      return;
+    }
+
+    setResetPasswordLoading(true);
+    setResetPasswordSuccess(false);
+    setResetPasswordError(null);
+
+    try {
+      const supabase = getSupabaseClient();
+
+      // Send password reset email
+      const { error } = await supabase.auth.resetPasswordForEmail(
+        member.email,
+        { redirectTo: `${window.location.origin}/auth/reset-password` }
+      );
+
+      if (error) throw error;
+
+      setResetPasswordSuccess(true);
+    } catch (error: any) {
+      console.error('Error sending password reset email:', error);
+      setResetPasswordError(error.message || 'Failed to send password reset email');
+    } finally {
+      setResetPasswordLoading(false);
+    }
+  };
+
   // Define the action buttons for the header
   const actionButtons = (
-    <Link href={`/members/edit/${member.id}`} className="btn-secondary">
-      Edit
-    </Link>
+    <div className="flex space-x-2">
+      <Link href={`/members/edit/${member.id}`} className="btn-secondary">
+        Edit
+      </Link>
+    </div>
   );
 
   return (
@@ -301,6 +336,27 @@ export default function MemberDetailPage() {
               <Link href={`/admin/documents/generate?member=${member.id}`} className="text-primary hover:underline block">
                 Generate Documents
               </Link>
+              {member.email && (
+                <button
+                  onClick={handleResetPassword}
+                  disabled={resetPasswordLoading}
+                  className="text-primary hover:underline block w-full text-left"
+                >
+                  {resetPasswordLoading ? 'Sending...' : 'Send Password Reset Email'}
+                </button>
+              )}
+
+              {resetPasswordSuccess && (
+                <div className="mt-2 p-2 bg-green-50 text-green-700 text-sm rounded">
+                  Password reset email sent successfully to {member.email}
+                </div>
+              )}
+
+              {resetPasswordError && (
+                <div className="mt-2 p-2 bg-red-50 text-red-700 text-sm rounded">
+                  {resetPasswordError}
+                </div>
+              )}
             </div>
           </div>
         </div>
