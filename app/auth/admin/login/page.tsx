@@ -179,15 +179,27 @@ export default function AdminLogin() {
       const redirectTo = searchParams.get('redirectTo');
 
       // Redirect based on role level or redirectTo parameter
+      let redirectPath = '';
+
       if (redirectTo) {
-        router.push(redirectTo);
+        redirectPath = redirectTo;
       } else if (roleLevel >= 4) { // Admin
-        router.push('/dashboard');
+        redirectPath = '/dashboard';
       } else if (roleLevel >= 3) { // Ministry Leader
-        router.push('/ministries/dashboard');
+        redirectPath = '/ministries/dashboard';
       } else if (roleLevel >= 2) { // Cell Leader
-        router.push('/cell-groups/dashboard');
+        redirectPath = '/cell-groups/dashboard';
       }
+
+      console.log('Redirecting to:', redirectPath);
+
+      // Force a hard navigation to ensure middleware processes the request properly
+      window.location.href = redirectPath;
+
+      // As a fallback, also use the router
+      setTimeout(() => {
+        router.replace(redirectPath);
+      }, 100);
     } catch (error: any) {
       console.error('Login error:', error);
 

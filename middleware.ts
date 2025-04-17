@@ -82,6 +82,8 @@ export async function middleware(request: NextRequest) {
 
   // Log user metadata for debugging
   console.log("User metadata in middleware:", userMetadata);
+  console.log("User ID in middleware:", session.user?.id);
+  console.log("User email in middleware:", session.user?.email);
 
   // Ensure role level is properly converted to number
   let userRoleLevel = 1; // Default to member
@@ -96,6 +98,11 @@ export async function middleware(request: NextRequest) {
     userRoleLevel = 4; // Ensure admin role gets admin level
     console.log("Upgraded to admin level based on role string");
   }
+
+  // Log the final decision for debugging
+  console.log("User role in middleware:", userRole);
+  console.log("User role level in middleware:", userRoleLevel);
+  console.log("Current path:", pathname);
 
   console.log("Final role level in middleware:", userRoleLevel);
 
@@ -154,22 +161,35 @@ export async function middleware(request: NextRequest) {
     (pathname === "/auth/login" ||
       pathname === "/auth/member/login" ||
       pathname === "/auth/admin/login" ||
-      pathname === "/auth/register")
+      pathname === "/auth/register" ||
+      pathname === "/")
   ) {
+    console.log(
+      "User is logged in and trying to access login/register/home page"
+    );
+    console.log("Redirecting based on role level:", userRoleLevel);
+
     // Redirect to appropriate dashboard based on role level
+    let redirectUrl;
+
     if (userRoleLevel >= 4) {
-      return NextResponse.redirect(new URL("/dashboard", request.url));
+      console.log("Redirecting to admin dashboard");
+      redirectUrl = new URL("/dashboard", request.url);
     } else if (userRoleLevel >= 3) {
-      return NextResponse.redirect(
-        new URL("/ministries/dashboard", request.url)
-      );
+      console.log("Redirecting to ministry dashboard");
+      redirectUrl = new URL("/ministries/dashboard", request.url);
     } else if (userRoleLevel >= 2) {
-      return NextResponse.redirect(
-        new URL("/cell-groups/dashboard", request.url)
-      );
+      console.log("Redirecting to cell group dashboard");
+      redirectUrl = new URL("/cell-groups/dashboard", request.url);
     } else {
-      return NextResponse.redirect(new URL("/member/dashboard", request.url));
+      console.log("Redirecting to member dashboard");
+      redirectUrl = new URL("/member/dashboard", request.url);
     }
+
+    // Add cache control headers to prevent caching
+    const response = NextResponse.redirect(redirectUrl);
+    response.headers.set("Cache-Control", "no-store, max-age=0");
+    return response;
   }
 
   return res;

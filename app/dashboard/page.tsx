@@ -31,32 +31,68 @@ function DashboardContent() {
   useEffect(() => {
     const fetchStats = async () => {
       try {
+        console.log('Fetching dashboard stats...');
         const supabase = getSupabaseClient();
+
+        // Check if we have a valid session first
+        const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+
+        if (sessionError) {
+          console.error('Session error in dashboard:', sessionError);
+          throw new Error('Authentication error: ' + sessionError.message);
+        }
+
+        if (!sessionData.session) {
+          console.error('No active session in dashboard');
+          throw new Error('No active session. Please login again.');
+        }
+
+        console.log('Session valid, user ID:', sessionData.session.user.id);
 
         // Fetch actual counts from Supabase
         const { count: membersCount, error: membersError } = await supabase
           .from('members')
           .select('*', { count: 'exact', head: true });
 
-        if (membersError) throw membersError;
+        if (membersError) {
+          console.error('Error fetching members count:', membersError);
+          throw membersError;
+        }
+
+        console.log('Members count:', membersCount);
 
         const { count: cellGroupsCount, error: cellGroupsError } = await supabase
           .from('cell_groups')
           .select('*', { count: 'exact', head: true });
 
-        if (cellGroupsError) throw cellGroupsError;
+        if (cellGroupsError) {
+          console.error('Error fetching cell groups count:', cellGroupsError);
+          throw cellGroupsError;
+        }
+
+        console.log('Cell groups count:', cellGroupsCount);
 
         const { count: districtsCount, error: districtsError } = await supabase
           .from('districts')
           .select('*', { count: 'exact', head: true });
 
-        if (districtsError) throw districtsError;
+        if (districtsError) {
+          console.error('Error fetching districts count:', districtsError);
+          throw districtsError;
+        }
+
+        console.log('Districts count:', districtsCount);
 
         const { count: ministriesCount, error: ministriesError } = await supabase
           .from('ministries')
           .select('*', { count: 'exact', head: true });
 
-        if (ministriesError) throw ministriesError;
+        if (ministriesError) {
+          console.error('Error fetching ministries count:', ministriesError);
+          throw ministriesError;
+        }
+
+        console.log('Ministries count:', ministriesCount);
 
         // For now, we'll keep using placeholder data for classes and services
         setStats({
@@ -67,6 +103,8 @@ function DashboardContent() {
           totalClasses: 5, // Placeholder
           upcomingServices: 8, // Placeholder
         });
+
+        console.log('Dashboard stats set successfully');
       } catch (error: any) {
         console.error('Error fetching dashboard stats:', error);
         setError(error.message || 'Failed to fetch dashboard stats');
