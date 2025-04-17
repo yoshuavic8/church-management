@@ -63,38 +63,38 @@ export default function MemberLogin() {
         throw error;
       }
 
-      // Get user role from members table
+      // Get user directly from auth
+      if (!data.user) {
+        throw new Error('User data not found');
+      }
+
+      // Get user metadata directly from auth
+      const userMetadata = data.user.user_metadata || {};
+
+      // Log auth user data for debugging
+      console.log('Auth user data:', data.user);
+      console.log('Auth user metadata:', userMetadata);
+
+      // Determine role and role level directly from auth metadata
+      let role = userMetadata.role || 'member';
+      let roleLevel = userMetadata.role_level ? Number(userMetadata.role_level) : 1;
+      let roleContext = userMetadata.role_context || null;
+
+      // Also get user data from members table as fallback
       const { data: userData, error: userError } = await supabase
         .from('members')
         .select('id, role, role_level, role_context, first_name, last_name, email')
-        .eq('id', data.user?.id)
+        .eq('id', data.user.id)
         .maybeSingle();
 
       if (userError) {
-        console.error('Error fetching user role:', userError);
-        // Continue with default role
-      }
-
-      // Get user metadata
-      const userMetadata = data.user?.user_metadata;
-
-      // Determine role and role level
-      let role = 'member';
-      let roleLevel = 1;
-      let roleContext = null;
-
-      // First check if we have role info in the members table
-      if (userData) {
+        console.error('Error fetching user role from members table:', userError);
+        // Continue with auth metadata
+      } else if (userData && (!userMetadata.role || !userMetadata.role_level)) {
+        // Use members data as fallback if auth metadata is missing
         role = userData.role || role;
         roleLevel = userData.role_level || roleLevel;
         roleContext = userData.role_context || roleContext;
-      }
-
-      // Then check if we have role info in user metadata (takes precedence)
-      if (userMetadata) {
-        role = userMetadata.role || role;
-        roleLevel = userMetadata.role_level || roleLevel;
-        roleContext = userMetadata.role_context || roleContext;
       }
 
       // Log final role information
@@ -126,14 +126,29 @@ export default function MemberLogin() {
         }
       }
 
-      // Update user metadata with role information
-      await supabase.auth.updateUser({
-        data: {
-          role,
-          role_level: roleLevel,
-          role_context: roleContext
+      // Update user metadata with role information if needed
+      if (role !== userMetadata.role ||
+          roleLevel !== Number(userMetadata.role_level) ||
+          JSON.stringify(roleContext) !== JSON.stringify(userMetadata.role_context)) {
+
+        console.log('Updating user metadata with role information');
+        const { data: updateData, error: updateError } = await supabase.auth.updateUser({
+          data: {
+            role,
+            role_level: roleLevel,
+            role_context: roleContext
+          }
+        });
+
+        if (updateError) {
+          console.error('Error updating user metadata:', updateError);
+          // Continue anyway, this is not critical
+        } else {
+          console.log('User metadata updated successfully:', updateData);
         }
-      });
+      } else {
+        console.log('User metadata already up to date, skipping update');
+      }
 
       // Check if there's a redirect URL in the query parameters
       const searchParams = new URLSearchParams(window.location.search);
@@ -146,7 +161,25 @@ export default function MemberLogin() {
         router.push('/member/dashboard');
       }
     } catch (error: any) {
-      setError(error.message || 'An error occurred during login');
+      console.error('Login error:', error);
+
+      // Provide more specific error messages
+      if (error.message?.includes('Invalid login credentials')) {
+        setError('Email atau password salah. Silakan coba lagi.');
+      } else if (error.message?.includes('Email not confirmed')) {
+        setError('Email belum dikonfirmasi. Silakan periksa email Anda untuk link konfirmasi.');
+      } else if (error.message?.includes('User not found')) {
+        setError('Pengguna tidak ditemukan. Silakan periksa email Anda atau daftar terlebih dahulu.');
+      } else {
+        setError(error.message || 'Terjadi kesalahan saat login. Silakan coba lagi.');
+      }
+
+      // Try to sign out to clear any partial auth state
+      try {
+        await supabase.auth.signOut();
+      } catch (signOutError) {
+        console.error('Error during sign out after failed login:', signOutError);
+      }
     } finally {
       setLoading(false);
     }
@@ -163,7 +196,7 @@ export default function MemberLogin() {
             Login untuk anggota gereja
           </p>
         </div>
-        
+
         {registered && (
           <div className="bg-green-50 border-l-4 border-green-400 p-4 mb-4">
             <div className="flex">
@@ -180,7 +213,7 @@ export default function MemberLogin() {
             </div>
           </div>
         )}
-        
+
         {error && (
           <div className="bg-red-50 border-l-4 border-red-400 p-4 mb-4">
             <div className="flex">
@@ -252,7 +285,7 @@ export default function MemberLogin() {
             </Link>
           </p>
         </div>
-        
+
         <div className="mt-2 text-center">
           <p className="text-sm text-gray-600">
             Admin atau pengurus?{' '}
