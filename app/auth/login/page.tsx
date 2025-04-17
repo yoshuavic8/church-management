@@ -31,7 +31,7 @@ export default function Login() {
       // Get user role from members table
       const { data: userData, error: userError } = await supabase
         .from('members')
-        .select('role, role_level, role_context')
+        .select('id, role, role_level, role_context, first_name, last_name, email')
         .eq('id', data.user?.id)
         .maybeSingle();
 
@@ -49,6 +49,31 @@ export default function Login() {
       const role = userData?.role || metadataRole || 'member';
       const roleLevel = userData?.role_level || metadataRoleLevel || 1;
       const roleContext = userData?.role_context || userMetadata?.role_context || null;
+
+      // If user exists in auth but not in members table, create a member record
+      if (!userData && data.user) {
+        console.log('User exists in auth but not in members table. Creating member record...');
+
+        // Create a new member record
+        const { error: insertError } = await supabase
+          .from('members')
+          .insert([
+            {
+              id: data.user.id,
+              email: data.user.email,
+              first_name: userMetadata?.first_name || '',
+              last_name: userMetadata?.last_name || '',
+              role: role,
+              role_level: roleLevel,
+              role_context: roleContext,
+              status: 'active'
+            }
+          ]);
+
+        if (insertError) {
+          console.error('Error creating member record:', insertError);
+        }
+      }
 
       // Update user metadata with role information
       await supabase.auth.updateUser({
