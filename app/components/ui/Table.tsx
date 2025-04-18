@@ -71,7 +71,7 @@ const TableBody = ({
           return React.cloneElement(child, {
             className: twMerge(
               child.props.className,
-              striped && index % 2 === 1 && 'bg-gray-50 dark:bg-gray-800/50',
+              striped && index % 2 === 1 && 'bg-gray-50 dark:bg-gray-800 dark:bg-opacity-50',
               hoverable && 'hover:bg-gray-100 dark:hover:bg-gray-800'
             ),
           });
@@ -103,7 +103,7 @@ interface TableCellProps {
 
 const TableCell = ({ children, className, header = false }: TableCellProps) => {
   const Component = header ? 'th' : 'td';
-  
+
   return (
     <Component
       className={twMerge(

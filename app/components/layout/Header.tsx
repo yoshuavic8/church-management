@@ -32,7 +32,7 @@ const Header = ({ sidebarOpen, setSidebarOpen }: HeaderProps) => {
     const newDarkMode = !darkMode;
     setDarkMode(newDarkMode);
     localStorage.setItem('darkMode', newDarkMode.toString());
-    
+
     if (newDarkMode) {
       document.documentElement.classList.add('dark');
     } else {
@@ -84,7 +84,7 @@ const Header = ({ sidebarOpen, setSidebarOpen }: HeaderProps) => {
             {showQuickScan && (
               <Link
                 href="/scan"
-                className="inline-flex items-center gap-2 rounded-md bg-brand-50 px-4 py-2 text-sm font-medium text-brand-500 hover:bg-brand-100 dark:bg-brand-500/10 dark:hover:bg-brand-500/20"
+                className="inline-flex items-center gap-2 rounded-md bg-brand-50 px-4 py-2 text-sm font-medium text-brand-500 hover:bg-brand-100 dark:bg-brand-500 dark:bg-opacity-10 dark:hover:bg-brand-500 dark:hover:bg-opacity-20"
               >
                 <svg
                   className="h-5 w-5"
