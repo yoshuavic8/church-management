@@ -105,8 +105,12 @@ function CellGroupsContent() {
               .select('*', { count: 'exact', head: true })
               .eq('cell_group_id', group.id);
 
-            if (leaderError)
-            if (memberError)
+            if (leaderError) {
+              console.error('Error fetching leader count:', leaderError);
+            }
+            if (memberError) {
+              console.error('Error fetching member count:', memberError);
+            }
 
             // Fix the district property if it's an array
             const processedDistrict = Array.isArray(group.district)

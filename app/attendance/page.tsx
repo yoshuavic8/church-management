@@ -4,7 +4,11 @@ import { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { getSupabaseClient } from '../lib/supabase';
-import Header from '../components/Header';
+import Layout from '../components/layout/Layout';
+import Card from '../components/ui/Card';
+import Button from '../components/ui/Button';
+import Input from '../components/ui/Input';
+import Badge from '../components/ui/Badge';
 import { EventCategory } from '../types/ministry';
 
 type AttendanceRecord = {
@@ -217,7 +221,7 @@ function AttendanceContent() {
                   cellGroupData = { name: contextName };
                 }
               } catch (error) {
-                
+
               }
             }
           } else if (eventCategory === 'ministry' && meeting.ministry_id) {
@@ -242,7 +246,7 @@ function AttendanceContent() {
                   ministryData = { name: contextName };
                 }
               } catch (error) {
-                
+
               }
             }
           } else {
@@ -280,7 +284,7 @@ function AttendanceContent() {
         // Calculate statistics for current month only
         calculateCurrentMonthStats(recordsWithStats);
       } catch (error) {
-        
+
       } finally {
         setLoading(false);
       }
@@ -558,46 +562,54 @@ function AttendanceContent() {
     setCategoryFilter('all');
   };
 
-  // Define the action buttons for the header
-  const actionButtons = (
-    <div className="flex space-x-2">
-      <Link href="/scan" className="btn-primary flex items-center">
-        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v1m6 11h2m-6 0h-2m0 0H8m4 0h4m-4-8a3 3 0 100-6 3 3 0 000 6z" />
-        </svg>
-        Quick Scan
-      </Link>
-      <Link href="/attendance/record" className="btn-primary">
-        Record Attendance
-      </Link>
-    </div>
-  );
-
   return (
-    <div>
-      <Header
-        title={memberId ? `Attendance History for ${memberName}` : "Attendance"}
-        actions={!memberId ? actionButtons : undefined}
-      />
+    <Layout>
+      <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold text-gray-800 dark:text-white/90">
+            {memberId ? `Attendance History for ${memberName}` : "Attendance"}
+          </h1>
+          <p className="text-gray-500 dark:text-gray-400">Track and manage attendance records</p>
+        </div>
+
+        {!memberId && (
+          <div className="mt-4 flex flex-wrap gap-2 sm:mt-0">
+            <Link href="/scan">
+              <Button variant="primary" className="flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" className="mr-1 h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v1m6 11h2m-6 0h-2m0 0H8m4 0h4m-4-8a3 3 0 100-6 3 3 0 000 6z" />
+                </svg>
+                Quick Scan
+              </Button>
+            </Link>
+            <Link href="/attendance/record">
+              <Button variant="primary">Record Attendance</Button>
+            </Link>
+          </div>
+        )}
+      </div>
 
       {memberId && (
         <div className="mb-4">
-          <Link href={`/members/${memberId}`} className="text-primary hover:underline">
-            &larr; Back to Member Profile
+          <Link href={`/members/${memberId}`} className="text-brand-500 hover:text-brand-600 dark:text-brand-400 dark:hover:text-brand-300 flex items-center">
+            <svg className="mr-1 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+            </svg>
+            Back to Member Profile
           </Link>
         </div>
       )}
 
       {/* Statistics Dashboard */}
-      <div className="mb-6 card p-6">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-semibold">Attendance Dashboard</h2>
+      <Card className="mb-6">
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="text-xl font-semibold text-gray-800 dark:text-white/90">Attendance Dashboard</h2>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Current Month Statistics - Always visible */}
-          <div className="bg-white p-4 rounded-lg shadow">
-            <h3 className="text-md font-medium text-gray-700 mb-3 border-b pb-2">Current Month</h3>
+          <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-theme-sm dark:border-gray-700 dark:bg-gray-800">
+            <h3 className="mb-3 border-b pb-2 text-md font-medium text-gray-700 dark:text-gray-300">Current Month</h3>
             <div className="space-y-3">
               <div className="flex justify-between items-center">
                 <span className="text-gray-600">Total Meetings:</span>
@@ -624,8 +636,8 @@ function AttendanceContent() {
 
           {/* Filtered Period Stats - Only show if filters are active */}
           {isFilterActive ? (
-            <div className="bg-white p-4 rounded-lg shadow">
-              <h3 className="text-md font-medium text-gray-700 mb-3 border-b pb-2">Filtered Period</h3>
+            <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-theme-sm dark:border-gray-700 dark:bg-gray-800">
+              <h3 className="mb-3 border-b pb-2 text-md font-medium text-gray-700 dark:text-gray-300">Filtered Period</h3>
               <div className="space-y-3">
                 <div className="flex justify-between items-center">
                   <span className="text-gray-600">Total Meetings:</span>
@@ -659,8 +671,8 @@ function AttendanceContent() {
           )}
 
           {/* Cell Group Insights */}
-          <div className="bg-white p-4 rounded-lg shadow">
-            <h3 className="text-md font-medium text-gray-700 mb-3 border-b pb-2">Context Insights</h3>
+          <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-theme-sm dark:border-gray-700 dark:bg-gray-800">
+            <h3 className="mb-3 border-b pb-2 text-md font-medium text-gray-700 dark:text-gray-300">Context Insights</h3>
             {stats.mostActiveCellGroup.name ? (
               <div className="space-y-3">
                 <div className="flex justify-between items-center">
@@ -687,15 +699,15 @@ function AttendanceContent() {
             )}
           </div>
         </div>
-      </div>
+      </Card>
 
       {/* Filters */}
-      <div className="card mb-6">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-semibold">Filters</h2>
+      <Card className="mb-6">
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="text-xl font-semibold text-gray-800 dark:text-white/90">Filters</h2>
           <button
             onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
-            className="text-sm text-primary hover:underline flex items-center"
+            className="flex items-center text-sm text-brand-500 hover:text-brand-600 dark:text-brand-400 dark:hover:text-brand-300"
           >
             {showAdvancedFilters ? (
               <>
@@ -932,7 +944,7 @@ function AttendanceContent() {
             </div>
           </div>
         )}
-      </div>
+      </Card>
 
       {/* Records Summary */}
       <div className="mb-4">
@@ -942,57 +954,57 @@ function AttendanceContent() {
       </div>
 
       {/* Data Table Section */}
-      <div className="card">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-semibold">Attendance Records</h2>
+      <Card>
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="text-xl font-semibold text-gray-800 dark:text-white/90">Attendance Records</h2>
         </div>
 
         {loading ? (
-          <div className="flex justify-center items-center h-64">
-            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+          <div className="flex h-64 items-center justify-center">
+            <div className="h-12 w-12 animate-spin rounded-full border-b-2 border-t-2 border-brand-500"></div>
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="min-w-full bg-white rounded-lg overflow-hidden">
-              <thead className="bg-gray-100">
+            <table className="min-w-full overflow-hidden rounded-lg bg-white dark:bg-gray-800">
+              <thead className="bg-gray-50 dark:bg-gray-700">
                 <tr>
-                  <th className="py-3 px-4 text-left">Date</th>
-                  <th className="py-3 px-4 text-left">Context</th>
-                  <th className="py-3 px-4 text-left">Type</th>
-                  <th className="py-3 px-4 text-right">Present</th>
-                  <th className="py-3 px-4 text-right">Visitors</th>
-                  <th className="py-3 px-4 text-right">Total</th>
-                  <th className="py-3 px-4 text-right">Offering</th>
-                  <th className="py-3 px-4 text-left">Actions</th>
+                  <th className="px-4 py-3 text-left font-medium text-gray-700 dark:text-gray-300">Date</th>
+                  <th className="px-4 py-3 text-left font-medium text-gray-700 dark:text-gray-300">Context</th>
+                  <th className="px-4 py-3 text-left font-medium text-gray-700 dark:text-gray-300">Type</th>
+                  <th className="px-4 py-3 text-right font-medium text-gray-700 dark:text-gray-300">Present</th>
+                  <th className="px-4 py-3 text-right font-medium text-gray-700 dark:text-gray-300">Visitors</th>
+                  <th className="px-4 py-3 text-right font-medium text-gray-700 dark:text-gray-300">Total</th>
+                  <th className="px-4 py-3 text-right font-medium text-gray-700 dark:text-gray-300">Offering</th>
+                  <th className="px-4 py-3 text-left font-medium text-gray-700 dark:text-gray-300">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-200">
+              <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
                 {currentRecords.map((record) => (
-                  <tr key={record.id} className="hover:bg-gray-50">
+                  <tr key={record.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
                     <td className="py-3 px-4">
                       {new Date(record.meeting_date).toLocaleDateString()}
                     </td>
                     <td className="py-3 px-4">
-                      <div className="font-medium">{record.context_name}</div>
-                      <div className="text-xs text-gray-500">{getCategoryLabel(record.event_category)}</div>
+                      <div className="font-medium text-gray-700 dark:text-gray-300">{record.context_name}</div>
+                      <div className="text-xs text-gray-500 dark:text-gray-400">{getCategoryLabel(record.event_category)}</div>
                     </td>
                     <td className="py-3 px-4">{getMeetingTypeLabel(record.meeting_type)}</td>
-                    <td className="py-3 px-4 text-right font-medium text-green-600">{record.present_count}</td>
-                    <td className="py-3 px-4 text-right text-blue-600">{record.visitor_count}</td>
-                    <td className="py-3 px-4 text-right font-medium">{record.total_count}</td>
+                    <td className="py-3 px-4 text-right font-medium text-success-600 dark:text-success-400">{record.present_count}</td>
+                    <td className="py-3 px-4 text-right text-brand-600 dark:text-brand-400">{record.visitor_count}</td>
+                    <td className="py-3 px-4 text-right font-medium text-gray-700 dark:text-gray-300">{record.total_count}</td>
                     <td className="py-3 px-4 text-right">
                       {record.offering !== null ? (
-                        <span className="font-medium text-green-600">
+                        <span className="font-medium text-success-600 dark:text-success-400">
                           Rp {record.offering.toLocaleString('id-ID', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                         </span>
                       ) : (
-                        <span className="text-gray-400">-</span>
+                        <span className="text-gray-400 dark:text-gray-500">-</span>
                       )}
                     </td>
                     <td className="py-3 px-4">
                       <Link
                         href={`/attendance/${record.id}`}
-                        className="text-primary hover:underline"
+                        className="text-brand-500 hover:text-brand-600 dark:text-brand-400 dark:hover:text-brand-300"
                       >
                         View
                       </Link>
@@ -1002,17 +1014,17 @@ function AttendanceContent() {
 
                 {filteredRecords.length === 0 && (
                   <tr>
-                    <td colSpan={8} className="py-8 px-4 text-center text-gray-500">
+                    <td colSpan={8} className="py-8 px-4 text-center text-gray-500 dark:text-gray-400">
                       <div className="flex flex-col items-center">
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 text-gray-300 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="mb-4 h-12 w-12 text-gray-300 dark:text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
                         </svg>
-                        <p className="text-lg font-medium mb-2">No attendance records found</p>
-                        <p className="text-sm text-gray-400 mb-4">Try adjusting your filters to find what you're looking for</p>
+                        <p className="mb-2 text-lg font-medium text-gray-700 dark:text-gray-300">No attendance records found</p>
+                        <p className="mb-4 text-sm text-gray-400 dark:text-gray-500">Try adjusting your filters to find what you're looking for</p>
                         {isFilterActive && (
                           <button
                             onClick={clearAllFilters}
-                            className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md text-sm hover:bg-gray-200 flex items-center"
+                            className="flex items-center rounded-md bg-gray-100 px-4 py-2 text-sm text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600"
                           >
                             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -1029,9 +1041,9 @@ function AttendanceContent() {
 
             {/* Pagination */}
             {filteredRecords.length > 0 && (
-              <div className="mt-6 flex flex-col sm:flex-row justify-between items-center border-t border-gray-200 pt-4">
+              <div className="mt-6 flex flex-col items-center border-t border-gray-200 pt-4 dark:border-gray-700 sm:flex-row sm:justify-between">
                 <div className="mb-4 sm:mb-0">
-                  <span className="text-sm text-gray-700">
+                  <span className="text-sm text-gray-700 dark:text-gray-300">
                     Showing <span className="font-medium">{indexOfFirstRecord + 1}</span> to{' '}
                     <span className="font-medium">
                       {Math.min(indexOfLastRecord, filteredRecords.length)}
@@ -1042,7 +1054,7 @@ function AttendanceContent() {
 
                 <div className="flex items-center space-x-2">
                   <select
-                    className="input-field py-1 px-2 text-sm"
+                    className="rounded-lg border border-gray-300 bg-white px-2 py-1 text-sm text-gray-900 focus:border-brand-500 focus:outline-none focus:ring-1 focus:ring-brand-500 dark:border-gray-600 dark:bg-gray-800 dark:text-white dark:focus:border-brand-500 dark:focus:ring-brand-500"
                     value={recordsPerPage}
                     onChange={(e) => {
                       setRecordsPerPage(Number(e.target.value));
@@ -1060,7 +1072,7 @@ function AttendanceContent() {
                     <button
                       onClick={() => paginate(Math.max(1, currentPage - 1))}
                       disabled={currentPage === 1}
-                      className={`px-3 py-1 rounded-l-md ${currentPage === 1 ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
+                      className={`rounded-l-md px-3 py-1 ${currentPage === 1 ? 'cursor-not-allowed bg-gray-100 text-gray-400 dark:bg-gray-700 dark:text-gray-500' : 'bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'}`}
                     >
                       Previous
                     </button>
@@ -1088,7 +1100,7 @@ function AttendanceContent() {
                           <button
                             key={pageNum}
                             onClick={() => paginate(pageNum)}
-                            className={`px-3 py-1 ${currentPage === pageNum ? 'bg-primary text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
+                            className={`px-3 py-1 ${currentPage === pageNum ? 'bg-brand-500 text-white dark:bg-brand-600' : 'bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'}`}
                           >
                             {pageNum}
                           </button>
@@ -1097,14 +1109,14 @@ function AttendanceContent() {
                     </div>
 
                     {/* Current page indicator for mobile */}
-                    <div className="sm:hidden px-3 py-1 bg-gray-100">
+                    <div className="bg-gray-100 px-3 py-1 dark:bg-gray-700 dark:text-gray-300 sm:hidden">
                       {currentPage} / {totalPages}
                     </div>
 
                     <button
                       onClick={() => paginate(Math.min(totalPages, currentPage + 1))}
                       disabled={currentPage === totalPages || totalPages === 0}
-                      className={`px-3 py-1 rounded-r-md ${currentPage === totalPages || totalPages === 0 ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
+                      className={`rounded-r-md px-3 py-1 ${currentPage === totalPages || totalPages === 0 ? 'cursor-not-allowed bg-gray-100 text-gray-400 dark:bg-gray-700 dark:text-gray-500' : 'bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600'}`}
                     >
                       Next
                     </button>
@@ -1114,17 +1126,17 @@ function AttendanceContent() {
             )}
           </div>
         )}
-      </div>
+      </Card>
 
       {/* No additional statistics needed at the bottom */}
-    </div>
+    </Layout>
   );
 }
 
 // Main component with Suspense boundary
 export default function AttendancePage() {
   return (
-    <Suspense fallback={<div className="p-4 flex justify-center items-center h-screen">Loading attendance data...</div>}>
+    <Suspense fallback={<div className="flex h-screen items-center justify-center p-4 text-gray-600 dark:text-gray-400">Loading attendance data...</div>}>
       <AttendanceContent />
     </Suspense>
   );

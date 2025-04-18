@@ -29,7 +29,7 @@ const QRCodeScanner = ({
   const [permissionDenied, setPermissionDenied] = useState(false);
   const [selectedDeviceId, setSelectedDeviceId] = useState<string>('');
   const [cameras, setCameras] = useState<Array<{ id: string; label: string }>>([]);
-  
+
   const scannerRef = useRef<Html5Qrcode | null>(null);
   const scannerDivId = 'qr-reader';
 
@@ -53,7 +53,7 @@ const QRCodeScanner = ({
         }
       })
       .catch((err) => {
-        
+
         setHasCamera(false);
         if (err.name === 'NotAllowedError') {
           setPermissionDenied(true);
@@ -64,7 +64,9 @@ const QRCodeScanner = ({
     return () => {
       if (scannerRef.current && isScanning) {
         scannerRef.current.stop()
-          .catch(err => 
+          .catch(err => {
+            console.error('Error stopping scanner:', err);
+          });
       }
     };
   }, []);
@@ -96,7 +98,7 @@ const QRCodeScanner = ({
       setIsScanning(true);
     })
     .catch((err) => {
-      
+
       if (err.name === 'NotAllowedError') {
         setPermissionDenied(true);
       }
@@ -110,7 +112,7 @@ const QRCodeScanner = ({
           setIsScanning(false);
         })
         .catch(err => {
-          
+
         });
     }
   };
@@ -118,7 +120,7 @@ const QRCodeScanner = ({
   const handleDeviceChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const deviceId = e.target.value;
     setSelectedDeviceId(deviceId);
-    
+
     // If already scanning, stop and restart with new device
     if (isScanning && scannerRef.current) {
       scannerRef.current.stop()
@@ -126,7 +128,9 @@ const QRCodeScanner = ({
           setSelectedDeviceId(deviceId);
           setTimeout(() => startScanner(), 300); // Small delay to ensure clean restart
         })
-        .catch(err => 
+        .catch(err => {
+          console.error('Error changing device:', err);
+        })
     }
   };
 
@@ -151,11 +155,11 @@ const QRCodeScanner = ({
   return (
     <div className={`qr-scanner-container ${className}`}>
       <div id={scannerDivId} style={{ width, height }} className="mx-auto overflow-hidden rounded-lg"></div>
-      
+
       <div className="mt-4 flex flex-col sm:flex-row gap-2 justify-center">
         {cameras.length > 1 && (
-          <select 
-            value={selectedDeviceId} 
+          <select
+            value={selectedDeviceId}
             onChange={handleDeviceChange}
             className="px-3 py-2 border border-gray-300 rounded-md text-sm"
             disabled={isScanning}
@@ -167,9 +171,9 @@ const QRCodeScanner = ({
             ))}
           </select>
         )}
-        
+
         {!isScanning ? (
-          <button 
+          <button
             onClick={startScanner}
             className="px-4 py-2 bg-primary text-white rounded-md text-sm hover:bg-primary-dark flex items-center justify-center"
           >
@@ -180,7 +184,7 @@ const QRCodeScanner = ({
             Start Camera
           </button>
         ) : (
-          <button 
+          <button
             onClick={stopScanner}
             className="px-4 py-2 bg-red-500 text-white rounded-md text-sm hover:bg-red-600 flex items-center justify-center"
           >
