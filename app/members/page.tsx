@@ -3,7 +3,12 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { getSupabaseClient } from '../lib/supabase';
-import Header from '../components/Header';
+import Layout from '../components/layout/Layout';
+import Card from '../components/ui/Card';
+import Button from '../components/ui/Button';
+import Input from '../components/ui/Input';
+import Badge from '../components/ui/Badge';
+import { Table, TableHead, TableBody, TableRow, TableCell } from '../components/ui/Table';
 
 type Member = {
   id: string;
@@ -49,7 +54,7 @@ export default function MembersPage() {
           setMembers([]);
         }
       } catch (error: any) {
-        
+
         setError(error.message || 'Failed to fetch members');
       } finally {
         setLoading(false);
@@ -103,7 +108,7 @@ export default function MembersPage() {
       setShowConfirmModal(false);
       setMemberToDeactivate(null);
     } catch (error: any) {
-      
+
       setError(error.message || 'Failed to deactivate member');
     } finally {
       setDeactivating(false);
@@ -116,135 +121,145 @@ export default function MembersPage() {
     setMemberToDeactivate(null);
   };
 
-  const actionButton = (
-    <Link href="/members/add" className="btn-primary">
-      Add New Member
-    </Link>
-  );
-
   return (
-    <div>
-      <Header
-        title="Members"
-        actions={actionButton}
-      />
-
-      <div className="card mb-6">
-        <div className="flex items-center">
-          <input
-            type="text"
-            placeholder="Search members..."
-            className="input-field"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
+    <Layout>
+      <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold text-gray-800 dark:text-white/90">Members</h1>
+          <p className="text-gray-500 dark:text-gray-400">Manage church members</p>
+        </div>
+        <div className="mt-4 sm:mt-0">
+          <Link href="/members/add">
+            <Button variant="primary">
+              Add New Member
+            </Button>
+          </Link>
         </div>
       </div>
 
-      {loading ? (
-        <div className="flex justify-center items-center h-64">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+      <Card className="mb-6">
+        <div className="flex items-center">
+          <Input
+            type="text"
+            placeholder="Search members..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            leftIcon={
+              <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            }
+          />
         </div>
+      </Card>
+
+      {loading ? (
+        <Card>
+          <div className="flex h-64 items-center justify-center">
+            <div className="h-12 w-12 animate-spin rounded-full border-b-2 border-t-2 border-brand-500"></div>
+          </div>
+        </Card>
       ) : error ? (
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+        <div className="mb-4 rounded border border-error-200 bg-error-50 px-4 py-3 text-error-700 dark:border-error-700 dark:bg-error-900/50 dark:text-error-400">
           {error}
         </div>
       ) : (
-        <div className="overflow-x-auto">
-          <table className="min-w-full bg-white rounded-lg overflow-hidden">
-            <thead className="bg-gray-100">
-              <tr>
-                <th className="py-3 px-4 text-left">Name</th>
-                <th className="py-3 px-4 text-left">Email</th>
-                <th className="py-3 px-4 text-left">Phone</th>
-                <th className="py-3 px-4 text-left">Join Date</th>
-                <th className="py-3 px-4 text-left">Status</th>
-                <th className="py-3 px-4 text-left">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200">
+        <Card>
+          <Table>
+            <TableHead>
+              <TableRow>
+                <TableCell header>Name</TableCell>
+                <TableCell header>Email</TableCell>
+                <TableCell header>Phone</TableCell>
+                <TableCell header>Join Date</TableCell>
+                <TableCell header>Status</TableCell>
+                <TableCell header>Actions</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
               {filteredMembers.map((member) => (
-                <tr key={member.id}>
-                  <td className="py-3 px-4">
+                <TableRow key={member.id}>
+                  <TableCell>
                     {member.first_name} {member.last_name}
-                  </td>
-                  <td className="py-3 px-4">{member.email}</td>
-                  <td className="py-3 px-4">{member.phone}</td>
-                  <td className="py-3 px-4">{new Date(member.join_date).toLocaleDateString()}</td>
-                  <td className="py-3 px-4">
-                    <span className={`px-2 py-1 rounded-full text-xs ${
-                      member.status === 'active'
-                        ? 'bg-green-100 text-green-800'
-                        : 'bg-red-100 text-red-800'
-                    }`}>
+                  </TableCell>
+                  <TableCell>{member.email}</TableCell>
+                  <TableCell>{member.phone}</TableCell>
+                  <TableCell>{new Date(member.join_date).toLocaleDateString()}</TableCell>
+                  <TableCell>
+                    <Badge
+                      variant={member.status === 'active' ? 'success' : 'danger'}
+                      size="sm"
+                      dot
+                    >
                       {member.status.charAt(0).toUpperCase() + member.status.slice(1)}
-                    </span>
-                  </td>
-                  <td className="py-3 px-4">
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
                     <div className="flex space-x-2">
                       <Link
                         href={`/members/${member.id}`}
-                        className="text-blue-600 hover:text-blue-800"
+                        className="text-brand-500 hover:text-brand-600 dark:text-brand-400 dark:hover:text-brand-300"
                       >
                         View
                       </Link>
                       <Link
                         href={`/members/edit/${member.id}`}
-                        className="text-yellow-600 hover:text-yellow-800"
+                        className="text-warning-500 hover:text-warning-600 dark:text-warning-400 dark:hover:text-warning-300"
                       >
                         Edit
                       </Link>
                       {member.status === 'active' && (
                         <button
                           onClick={() => handleDeactivateMember(member.id, member.first_name, member.last_name)}
-                          className="text-red-600 hover:text-red-800"
+                          className="text-error-500 hover:text-error-600 dark:text-error-400 dark:hover:text-error-300"
                         >
                           Deactivate
                         </button>
                       )}
                     </div>
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               ))}
 
               {filteredMembers.length === 0 && (
-                <tr>
-                  <td colSpan={6} className="py-4 px-4 text-center text-gray-500">
+                <TableRow>
+                  <TableCell colSpan={6} className="py-4 text-center text-gray-500 dark:text-gray-400">
                     No members found
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               )}
-            </tbody>
-          </table>
-        </div>
+            </TableBody>
+          </Table>
+        </Card>
       )}
 
       {/* Confirmation Modal */}
       {showConfirmModal && memberToDeactivate && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white p-6 rounded-lg shadow-lg max-w-md w-full">
-            <h3 className="text-xl font-semibold mb-4">Confirm Deactivation</h3>
-            <p className="mb-6">Are you sure you want to deactivate {memberToDeactivate.name}? This will hide them from active lists but preserve their attendance history.</p>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+          <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-lg dark:bg-gray-800">
+            <h3 className="mb-4 text-xl font-semibold text-gray-800 dark:text-white/90">Confirm Deactivation</h3>
+            <p className="mb-6 text-gray-600 dark:text-gray-300">Are you sure you want to deactivate {memberToDeactivate.name}? This will hide them from active lists but preserve their attendance history.</p>
 
             <div className="flex justify-end space-x-3">
-              <button
+              <Button
+                variant="outline"
                 onClick={cancelDeactivation}
-                className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-100"
                 disabled={deactivating}
               >
                 Cancel
-              </button>
-              <button
+              </Button>
+              <Button
+                variant="danger"
                 onClick={confirmDeactivation}
-                className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
                 disabled={deactivating}
+                isLoading={deactivating}
               >
                 {deactivating ? 'Deactivating...' : 'Deactivate'}
-              </button>
+              </Button>
             </div>
           </div>
         </div>
       )}
-    </div>
+    </Layout>
   );
 }

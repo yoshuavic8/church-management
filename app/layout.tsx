@@ -3,13 +3,18 @@ import type { Metadata } from 'next'
 import { Outfit } from 'next/font/google'
 import { ReactNode } from 'react'
 import { AuthProvider } from './contexts/AuthContext'
+import MobileOptimization from './components/layout/MobileOptimization'
 
 // Suppress hydration warnings
 const BodyContent = ({ children }: { children: ReactNode }) => {
   return <>{children}</>
 }
 
-const outfit = Outfit({ subsets: ['latin'] })
+const outfit = Outfit({
+  subsets: ['latin'],
+  display: 'swap',
+  variable: '--font-outfit',
+})
 
 export const metadata: Metadata = {
   title: 'Church Management System',
@@ -22,9 +27,10 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en">
+    <html lang="en" className={outfit.variable}>
       <body className={`${outfit.className} font-outfit`} suppressHydrationWarning={true}>
         <AuthProvider>
+          <MobileOptimization />
           <BodyContent>{children}</BodyContent>
         </AuthProvider>
       </body>

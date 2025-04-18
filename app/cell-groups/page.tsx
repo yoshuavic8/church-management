@@ -4,7 +4,11 @@ import { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { getSupabaseClient } from '../lib/supabase';
-import Header from '../components/Header';
+import Layout from '../components/layout/Layout';
+import Card from '../components/ui/Card';
+import Button from '../components/ui/Button';
+import Input from '../components/ui/Input';
+import Badge from '../components/ui/Badge';
 
 type CellGroup = {
   id: string;
@@ -55,7 +59,7 @@ function CellGroupsContent() {
             });
           }
         } catch (error: any) {
-          
+
           setError(error.message || 'Failed to fetch member data');
         }
       }
@@ -101,8 +105,8 @@ function CellGroupsContent() {
               .select('*', { count: 'exact', head: true })
               .eq('cell_group_id', group.id);
 
-            if (leaderError) 
-            if (memberError) 
+            if (leaderError)
+            if (memberError)
 
             // Fix the district property if it's an array
             const processedDistrict = Array.isArray(group.district)
@@ -123,7 +127,7 @@ function CellGroupsContent() {
           setCellGroups([]);
         }
       } catch (error: any) {
-        
+
         setError(error.message || 'Failed to fetch cell groups');
       } finally {
         setLoading(false);
@@ -178,99 +182,109 @@ function CellGroupsContent() {
       // Redirect to member detail page
       router.push(`/members/${memberToAdd.id}?success=added_to_cell_group`);
     } catch (error: any) {
-      
+
       setError(error.message || 'Failed to add member to cell group');
       setAddingMember(false);
     }
   };
 
-  // Define the action button for the header
-  const actionButton = (
-    <Link href="/cell-groups/add" className="btn-primary">
-      Add New Cell Group
-    </Link>
-  );
-
   return (
-    <div>
-      <Header
-        title="Cell Groups"
-        actions={actionButton}
-      />
+    <Layout>
+      <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold text-gray-800 dark:text-white/90">Cell Groups</h1>
+          <p className="text-gray-500 dark:text-gray-400">Manage church cell groups</p>
+        </div>
+        <div className="mt-4 sm:mt-0">
+          <Link href="/cell-groups/add">
+            <Button variant="primary">
+              Add New Cell Group
+            </Button>
+          </Link>
+        </div>
+      </div>
 
       {memberToAdd && (
-        <div className="bg-blue-100 border border-blue-400 text-blue-700 px-4 py-3 rounded mb-4">
+        <div className="mb-4 rounded border border-brand-200 bg-brand-50 px-4 py-3 text-brand-700 dark:border-brand-700 dark:bg-brand-900/50 dark:text-brand-400">
           <p className="font-medium">Select a cell group to add {memberToAdd.name} to:</p>
         </div>
       )}
 
-      <div className="card mb-6">
+      <Card className="mb-6">
         <div className="flex items-center">
-          <input
+          <Input
             type="text"
             placeholder="Search cell groups..."
-            className="input-field"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
+            leftIcon={
+              <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            }
           />
         </div>
-      </div>
+      </Card>
 
       {loading ? (
-        <div className="flex justify-center items-center h-64">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
-        </div>
+        <Card>
+          <div className="flex h-64 items-center justify-center">
+            <div className="h-12 w-12 animate-spin rounded-full border-b-2 border-t-2 border-brand-500"></div>
+          </div>
+        </Card>
       ) : error ? (
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+        <div className="mb-4 rounded border border-error-200 bg-error-50 px-4 py-3 text-error-700 dark:border-error-700 dark:bg-error-900/50 dark:text-error-400">
           {error}
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
           {filteredCellGroups.map((group) => (
-            <div key={group.id} className="card hover:shadow-lg transition-shadow">
-              <div className="flex justify-between items-start">
-                <h2 className="text-xl font-semibold">{group.name}</h2>
-                <span className={`px-2 py-1 rounded-full text-xs ${
-                  group.status === 'active'
-                    ? 'bg-green-100 text-green-800'
-                    : 'bg-red-100 text-red-800'
-                }`}>
+            <Card key={group.id} className="hover:shadow-theme-md transition-shadow">
+              <div className="flex items-start justify-between">
+                <h2 className="text-xl font-semibold text-gray-800 dark:text-white/90">{group.name}</h2>
+                <Badge
+                  variant={group.status === 'active' ? 'success' : 'danger'}
+                  size="sm"
+                  dot
+                >
                   {group.status.charAt(0).toUpperCase() + group.status.slice(1)}
-                </span>
+                </Badge>
               </div>
 
               {memberToAdd && group.status === 'active' && (
                 <div className="mt-4">
-                  <button
+                  <Button
+                    variant="primary"
                     onClick={() => handleAddMemberToCellGroup(group.id)}
                     disabled={addingMember}
-                    className="btn-primary w-full"
+                    isLoading={addingMember}
+                    fullWidth
                   >
                     {addingMember ? 'Adding...' : `Add ${memberToAdd.name} to this group`}
-                  </button>
+                  </Button>
                 </div>
               )}
 
-              <p className="text-gray-600 mt-2">District: {group.district_name}</p>
+              <p className="mt-2 text-gray-600 dark:text-gray-400">District: {group.district_name}</p>
 
               <div className="mt-4 space-y-2">
-                <div className="flex items-center text-gray-600">
-                  <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <div className="flex items-center text-gray-600 dark:text-gray-400">
+                  <svg className="mr-2 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
                   </svg>
                   <span>{group.meeting_day}s at {group.meeting_time}</span>
                 </div>
 
-                <div className="flex items-center text-gray-600">
-                  <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <div className="flex items-center text-gray-600 dark:text-gray-400">
+                  <svg className="mr-2 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
                   </svg>
                   <span>{group.location}</span>
                 </div>
 
-                <div className="flex items-center text-gray-600">
-                  <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <div className="flex items-center text-gray-600 dark:text-gray-400">
+                  <svg className="mr-2 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path>
                   </svg>
                   <span>{group.leader_count} leaders, {group.member_count} members</span>
@@ -278,28 +292,28 @@ function CellGroupsContent() {
               </div>
 
               <div className="mt-6 flex justify-end">
-                <Link href={`/cell-groups/${group.id}`} className="text-primary hover:underline">
+                <Link href={`/cell-groups/${group.id}`} className="text-brand-500 hover:text-brand-600 dark:text-brand-400 dark:hover:text-brand-300">
                   View Details
                 </Link>
               </div>
-            </div>
+            </Card>
           ))}
 
           {filteredCellGroups.length === 0 && (
-            <div className="col-span-full text-center py-8 text-gray-500">
+            <div className="col-span-full py-8 text-center text-gray-500 dark:text-gray-400">
               No cell groups found
             </div>
           )}
         </div>
       )}
-    </div>
+    </Layout>
   );
 }
 
 // Main component with Suspense boundary
 export default function CellGroupsPage() {
   return (
-    <Suspense fallback={<div className="p-4 flex justify-center items-center h-screen">Loading cell groups...</div>}>
+    <Suspense fallback={<div className="flex h-screen items-center justify-center p-4 text-gray-600 dark:text-gray-400">Loading cell groups...</div>}>
       <CellGroupsContent />
     </Suspense>
   );
