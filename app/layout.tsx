@@ -1,7 +1,8 @@
 import './globals.css'
 import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
-import { ReactNode, useEffect } from 'react'
+import { ReactNode } from 'react'
+import { AuthProvider } from './contexts/AuthContext'
 
 // Suppress hydration warnings
 const BodyContent = ({ children }: { children: ReactNode }) => {
@@ -23,7 +24,9 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={inter.className} suppressHydrationWarning={true}>
-        <BodyContent>{children}</BodyContent>
+        <AuthProvider>
+          <BodyContent>{children}</BodyContent>
+        </AuthProvider>
       </body>
     </html>
   )

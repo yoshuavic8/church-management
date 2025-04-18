@@ -3,10 +3,12 @@
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { getSupabaseClient } from '../../lib/supabase';
+import { getSupabaseClient, isAdmin } from '../../lib/supabase';
 import Header from '../../components/Header';
 import QRCodeGenerator from '../../components/QRCodeGenerator';
+import MemberTokenManager from '../../components/MemberTokenManager';
 import { useRef } from 'react';
+import { useAuth } from '../../contexts/AuthContext';
 
 type Member = {
   id: string;
@@ -36,6 +38,13 @@ export default function MemberDetailPage() {
   const [resetPasswordLoading, setResetPasswordLoading] = useState(false);
   const [resetPasswordSuccess, setResetPasswordSuccess] = useState(false);
   const [resetPasswordError, setResetPasswordError] = useState<string | null>(null);
+  const [isAdminUser, setIsAdminUser] = useState(false);
+  const { isAdmin: authIsAdmin } = useAuth();
+
+  useEffect(() => {
+    // Set admin status from auth context
+    setIsAdminUser(authIsAdmin);
+  }, [authIsAdmin]);
 
   useEffect(() => {
     const fetchMemberData = async () => {
@@ -359,6 +368,11 @@ export default function MemberDetailPage() {
               )}
             </div>
           </div>
+
+          {/* Member Token Manager - Only visible to admins */}
+          {isAdminUser && (
+            <MemberTokenManager member={member} />
+          )}
         </div>
       </div>
     </div>

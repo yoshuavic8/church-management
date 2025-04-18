@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import Header from '../components/Header';
 import { getSupabaseClient } from '../lib/supabase';
+import ProtectedRoute from '../components/ProtectedRoute';
+import { useAuth } from '../contexts/AuthContext';
 
 // Define the stats type
 type DashboardStats = {
@@ -17,6 +19,7 @@ type DashboardStats = {
 
 // Client-side component for dashboard stats
 function DashboardContent() {
+  const { user } = useAuth();
   const [stats, setStats] = useState<DashboardStats>({
     totalMembers: 0,
     totalCellGroups: 0,
@@ -34,20 +37,12 @@ function DashboardContent() {
         console.log('Fetching dashboard stats...');
         const supabase = getSupabaseClient();
 
-        // Check if we have a valid session first
-        const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
-
-        if (sessionError) {
-          console.error('Session error in dashboard:', sessionError);
-          throw new Error('Authentication error: ' + sessionError.message);
+        if (!user) {
+          console.error('No user in auth context');
+          throw new Error('Authentication required. Please login.');
         }
 
-        if (!sessionData.session) {
-          console.error('No active session in dashboard');
-          throw new Error('No active session. Please login again.');
-        }
-
-        console.log('Session valid, user ID:', sessionData.session.user.id);
+        console.log('User authenticated, ID:', user.id);
 
         // Fetch actual counts from Supabase
         const { count: membersCount, error: membersError } = await supabase
@@ -113,8 +108,10 @@ function DashboardContent() {
       }
     };
 
-    fetchStats();
-  }, []);
+    if (user) {
+      fetchStats();
+    }
+  }, [user]);
 
   if (loading) {
     return (
@@ -247,12 +244,14 @@ function DashboardContent() {
 // Main dashboard page component
 export default function Dashboard() {
   return (
-    <div>
-      <Header
-        title="Dashboard"
-        showBackButton={false}
-      />
-      <DashboardContent />
-    </div>
+    <ProtectedRoute adminOnly={true}>
+      <div>
+        <Header
+          title="Dashboard"
+          showBackButton={false}
+        />
+        <DashboardContent />
+      </div>
+    </ProtectedRoute>
   );
 }

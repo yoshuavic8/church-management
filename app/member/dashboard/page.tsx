@@ -4,8 +4,11 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { getSupabaseClient } from '../../lib/supabase';
 import QRCodeGenerator from '../../components/QRCodeGenerator';
+import ProtectedRoute from '../../components/ProtectedRoute';
+import { useAuth } from '../../contexts/AuthContext';
 
 export default function MemberDashboard() {
+  const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [memberData, setMemberData] = useState<any>(null);
   const [attendanceStats, setAttendanceStats] = useState({
@@ -19,43 +22,35 @@ export default function MemberDashboard() {
 
   useEffect(() => {
     const fetchMemberData = async () => {
+      if (!user) return;
+
       try {
         const supabase = getSupabaseClient();
-        
-        // Get current user
-        const { data: { user } } = await supabase.auth.getUser();
-        
-        if (!user) {
-          throw new Error('User not authenticated');
+
+        // Use user from auth context
+        setMemberData(user);
+
+        // Get cell group details if user has a cell group
+        if (user.cell_group_id) {
+          const { data: cellGroupData, error: cellGroupError } = await supabase
+            .from('cell_groups')
+            .select('id, name')
+            .eq('id', user.cell_group_id)
+            .single();
+
+          if (!cellGroupError && cellGroupData) {
+            setMemberData(prev => ({
+              ...prev,
+              cell_group: cellGroupData
+            }));
+          }
         }
-        
-        // Get member profile
-        const { data: memberData, error: memberError } = await supabase
-          .from('members')
-          .select(`
-            id, 
-            first_name, 
-            last_name, 
-            email, 
-            phone, 
-            status,
-            cell_group:cell_group_id (
-              id, 
-              name
-            )
-          `)
-          .eq('id', user.id)
-          .single();
-          
-        if (memberError) throw memberError;
-        
-        setMemberData(memberData);
-        
+
         // Get attendance statistics
         const today = new Date();
         const threeMonthsAgo = new Date();
         threeMonthsAgo.setMonth(today.getMonth() - 3);
-        
+
         const { data: attendanceData, error: attendanceError } = await supabase
           .from('attendance_participants')
           .select(`
@@ -67,15 +62,15 @@ export default function MemberDashboard() {
           .eq('member_id', user.id)
           .gte('meeting.meeting_date', threeMonthsAgo.toISOString())
           .lte('meeting.meeting_date', today.toISOString());
-          
+
         if (attendanceError) throw attendanceError;
-        
+
         if (attendanceData && attendanceData.length > 0) {
           const total = attendanceData.length;
           const present = attendanceData.filter(a => a.status === 'present').length;
           const absent = attendanceData.filter(a => a.status === 'absent').length;
           const percentage = total > 0 ? Math.round((present / total) * 100) : 0;
-          
+
           setAttendanceStats({
             total,
             present,
@@ -83,7 +78,7 @@ export default function MemberDashboard() {
             percentage
           });
         }
-        
+
         // Get upcoming meetings
         const { data: upcomingData, error: upcomingError } = await supabase
           .from('attendance_meetings')
@@ -99,11 +94,11 @@ export default function MemberDashboard() {
           .gte('meeting_date', today.toISOString())
           .order('meeting_date', { ascending: true })
           .limit(3);
-          
+
         if (upcomingError) throw upcomingError;
-        
+
         setUpcomingMeetings(upcomingData || []);
-        
+
         // Get latest news
         const { data: newsData, error: newsError } = await supabase
           .from('articles')
@@ -111,20 +106,22 @@ export default function MemberDashboard() {
           .eq('status', 'published')
           .order('published_at', { ascending: false })
           .limit(3);
-          
+
         if (newsError) throw newsError;
-        
+
         setLatestNews(newsData || []);
-        
+
       } catch (error) {
         console.error('Error fetching member data:', error);
       } finally {
         setLoading(false);
       }
     };
-    
-    fetchMemberData();
-  }, []);
+
+    if (user) {
+      fetchMemberData();
+    }
+  }, [user]);
 
   const getContextName = (meeting: any) => {
     if (meeting.event_category === 'cell_group' && meeting.cell_group) {
@@ -155,7 +152,8 @@ export default function MemberDashboard() {
   }
 
   return (
-    <div className="space-y-6">
+    <ProtectedRoute>
+      <div className="space-y-6">
       {/* Welcome Section */}
       <div className="bg-white shadow rounded-lg p-6">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between">
@@ -168,8 +166,8 @@ export default function MemberDashboard() {
             </p>
           </div>
           <div className="mt-4 md:mt-0">
-            <Link 
-              href="/self-checkin" 
+            <Link
+              href="/self-checkin"
               className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
             >
               <svg xmlns="http://www.w3.org/2000/svg" className="-ml-1 mr-2 h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -187,15 +185,15 @@ export default function MemberDashboard() {
         <div className="bg-white shadow rounded-lg p-6">
           <h2 className="text-lg font-medium text-gray-900 mb-4">Your QR Code</h2>
           <div className="flex flex-col items-center">
-            <QRCodeGenerator 
-              value={memberData?.id} 
-              size={180} 
+            <QRCodeGenerator
+              value={memberData?.id}
+              size={180}
               level="H"
               className="mb-3"
             />
             <p className="text-sm text-gray-500 text-center mb-2">Use this for quick attendance</p>
-            <button 
-              onClick={() => window.print()} 
+            <button
+              onClick={() => window.print()}
               className="mt-2 inline-flex items-center px-3 py-1 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
             >
               <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -216,8 +214,8 @@ export default function MemberDashboard() {
                 <span className="text-sm font-medium text-gray-900">{attendanceStats.percentage}%</span>
               </div>
               <div className="w-full bg-gray-200 rounded-full h-2.5">
-                <div 
-                  className="bg-primary h-2.5 rounded-full" 
+                <div
+                  className="bg-primary h-2.5 rounded-full"
                   style={{ width: `${attendanceStats.percentage}%` }}
                 ></div>
               </div>
@@ -237,8 +235,8 @@ export default function MemberDashboard() {
               </div>
             </div>
             <div className="pt-2">
-              <Link 
-                href="/member/attendance" 
+              <Link
+                href="/member/attendance"
                 className="text-sm text-primary hover:text-primary-dark font-medium"
               >
                 View Full Attendance History →
@@ -253,8 +251,8 @@ export default function MemberDashboard() {
           {memberData?.cell_group ? (
             <div>
               <p className="text-xl font-semibold text-gray-900 mb-2">{memberData.cell_group.name}</p>
-              <Link 
-                href="/member/cell-group" 
+              <Link
+                href="/member/cell-group"
                 className="text-sm text-primary hover:text-primary-dark font-medium"
               >
                 View Cell Group Details →
@@ -305,23 +303,23 @@ export default function MemberDashboard() {
       <div className="bg-white shadow rounded-lg p-6">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-lg font-medium text-gray-900">Latest News & Updates</h2>
-          <Link 
-            href="/member/news" 
+          <Link
+            href="/member/news"
             className="text-sm text-primary hover:text-primary-dark font-medium"
           >
             View All →
           </Link>
         </div>
-        
+
         {latestNews.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {latestNews.map((article) => (
               <div key={article.id} className="border border-gray-200 rounded-lg overflow-hidden">
                 {article.image_url ? (
                   <div className="h-40 overflow-hidden">
-                    <img 
-                      src={article.image_url} 
-                      alt={article.title} 
+                    <img
+                      src={article.image_url}
+                      alt={article.title}
                       className="w-full h-full object-cover"
                     />
                   </div>
@@ -345,8 +343,8 @@ export default function MemberDashboard() {
                   {article.summary && (
                     <p className="text-xs text-gray-500 mb-3 line-clamp-2">{article.summary}</p>
                   )}
-                  <Link 
-                    href={`/member/news/${article.id}`} 
+                  <Link
+                    href={`/member/news/${article.id}`}
                     className="text-xs text-primary hover:text-primary-dark font-medium"
                   >
                     Read More →
@@ -362,5 +360,6 @@ export default function MemberDashboard() {
         )}
       </div>
     </div>
+    </ProtectedRoute>
   );
 }

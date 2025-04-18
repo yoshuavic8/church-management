@@ -2,14 +2,13 @@
 
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
 
 export default function LoginRedirect() {
   const router = useRouter();
 
   useEffect(() => {
-    // Redirect to the new member login page
-    router.replace('/auth/member/login');
+    // Redirect to admin login page
+    router.replace('/auth/admin/login');
   }, [router]);
 
   return (
@@ -20,21 +19,11 @@ export default function LoginRedirect() {
             Redirecting...
           </h2>
           <p className="mt-2 text-center text-sm text-gray-600">
-            Anda akan dialihkan ke halaman login baru.
+            Please wait while we redirect you to the login page.
           </p>
-          <div className="mt-4 text-center">
-            <p className="text-sm text-gray-600">
-              Jika Anda tidak dialihkan, silakan klik salah satu link berikut:
-            </p>
-            <div className="mt-4 flex flex-col space-y-2">
-              <Link href="/auth/member/login" className="text-primary hover:underline">
-                Login Anggota
-              </Link>
-              <Link href="/auth/admin/login" className="text-primary hover:underline">
-                Login Admin
-              </Link>
-            </div>
-          </div>
+        </div>
+        <div className="flex justify-center mt-4">
+          <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
         </div>
       </div>
     </div>
