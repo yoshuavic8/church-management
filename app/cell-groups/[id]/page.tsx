@@ -11,7 +11,7 @@ type CellGroup = {
   name: string;
   meeting_day: string;
   meeting_time: string;
-  location: string;
+  meeting_location: string;
   district_id: string;
   district: {
     name: string;
@@ -55,7 +55,7 @@ export default function CellGroupDetailPage() {
             name,
             meeting_day,
             meeting_time,
-            location,
+            meeting_location,
             district_id,
             status,
             district:district_id (name)
@@ -139,7 +139,7 @@ export default function CellGroupDetailPage() {
 
         setMembers(filteredMembers);
       } catch (error: any) {
-        
+
         setError(error.message || 'Failed to fetch cell group data');
       } finally {
         setLoading(false);
@@ -242,7 +242,7 @@ export default function CellGroupDetailPage() {
 
               <div className="md:col-span-2">
                 <h3 className="text-sm font-medium text-gray-500">Location</h3>
-                <p className="mt-1">{cellGroup.location || 'Not set'}</p>
+                <p className="mt-1">{cellGroup.meeting_location || 'Not set'}</p>
               </div>
             </div>
           </div>

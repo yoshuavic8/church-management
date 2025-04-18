@@ -21,7 +21,7 @@ type CellGroupFormProps = {
     name?: string;
     meeting_day?: string;
     meeting_time?: string;
-    location?: string;
+    meeting_location?: string;
     district_id?: string;
     status?: string;
   };
@@ -34,7 +34,7 @@ export default function CellGroupForm({ initialData = {}, mode }: CellGroupFormP
     name: initialData.name || '',
     meeting_day: initialData.meeting_day || '',
     meeting_time: initialData.meeting_time || '',
-    location: initialData.location || '',
+    meeting_location: initialData.meeting_location || '',
     district_id: initialData.district_id || '',
     status: initialData.status || 'active',
   });
@@ -263,14 +263,14 @@ export default function CellGroupForm({ initialData = {}, mode }: CellGroupFormP
         </div>
 
         <div className="md:col-span-2">
-          <label htmlFor="location" className="block text-sm font-medium text-gray-700 mb-1">
+          <label htmlFor="meeting_location" className="block text-sm font-medium text-gray-700 mb-1">
             Location
           </label>
           <input
-            id="location"
-            name="location"
+            id="meeting_location"
+            name="meeting_location"
             type="text"
-            value={formData.location}
+            value={formData.meeting_location}
             onChange={handleChange}
             className="input-field"
           />
