@@ -36,7 +36,7 @@ export default function MemberNews() {
       setCategories(uniqueCategories);
       
     } catch (error) {
-      console.error('Error fetching categories:', error);
+      
     }
   };
 
@@ -99,7 +99,7 @@ export default function MemberNews() {
       }
       
     } catch (error) {
-      console.error('Error fetching articles:', error);
+      
       setArticles([]);
     } finally {
       setLoading(false);

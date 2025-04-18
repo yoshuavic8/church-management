@@ -56,7 +56,7 @@ export default function MemberProfile() {
           emergency_contact_phone: data.emergency_contact_phone || ''
         });
       } catch (error) {
-        console.error('Error fetching member data:', error);
+        
       } finally {
         setLoading(false);
       }
@@ -108,7 +108,7 @@ export default function MemberProfile() {
       setUpdateSuccess(true);
       setEditMode(false);
     } catch (error: any) {
-      console.error('Error updating profile:', error);
+      
       setUpdateError(error.message || 'Failed to update profile');
     }
   };

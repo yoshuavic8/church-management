@@ -31,7 +31,7 @@ export default function AdminUsers() {
       
       setUsers(data || []);
     } catch (error) {
-      console.error('Error fetching users:', error);
+      
     } finally {
       setLoading(false);
     }
@@ -89,7 +89,7 @@ export default function AdminUsers() {
       // Refresh the user list
       fetchUsers();
     } catch (error: any) {
-      console.error('Error setting admin role:', error);
+      
       setSetAdminError(error.message || 'Failed to set admin role');
     } finally {
       setSetAdminLoading(false);

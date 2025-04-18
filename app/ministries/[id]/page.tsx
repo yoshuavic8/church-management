@@ -74,7 +74,7 @@ function MinistryDetailContent() {
 
         setMembers(processedMembers);
       } catch (error: any) {
-        console.error('Error fetching ministry data:', error);
+        
         setError(error.message || 'Failed to fetch ministry data');
       } finally {
         setLoading(false);

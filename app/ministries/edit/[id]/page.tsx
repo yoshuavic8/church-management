@@ -44,7 +44,7 @@ function EditMinistryContent() {
         
         setMinistry(processedMinistry);
       } catch (error: any) {
-        console.error('Error fetching ministry:', error);
+        
         setError(error.message || 'Failed to fetch ministry');
       } finally {
         setLoading(false);

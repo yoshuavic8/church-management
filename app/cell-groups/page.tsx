@@ -55,7 +55,7 @@ function CellGroupsContent() {
             });
           }
         } catch (error: any) {
-          console.error('Error fetching member data:', error);
+          
           setError(error.message || 'Failed to fetch member data');
         }
       }
@@ -101,8 +101,8 @@ function CellGroupsContent() {
               .select('*', { count: 'exact', head: true })
               .eq('cell_group_id', group.id);
 
-            if (leaderError) console.error('Error fetching leader count:', leaderError);
-            if (memberError) console.error('Error fetching member count:', memberError);
+            if (leaderError) 
+            if (memberError) 
 
             // Fix the district property if it's an array
             const processedDistrict = Array.isArray(group.district)
@@ -123,7 +123,7 @@ function CellGroupsContent() {
           setCellGroups([]);
         }
       } catch (error: any) {
-        console.error('Error fetching cell groups:', error);
+        
         setError(error.message || 'Failed to fetch cell groups');
       } finally {
         setLoading(false);
@@ -178,7 +178,7 @@ function CellGroupsContent() {
       // Redirect to member detail page
       router.push(`/members/${memberToAdd.id}?success=added_to_cell_group`);
     } catch (error: any) {
-      console.error('Error adding member to cell group:', error);
+      
       setError(error.message || 'Failed to add member to cell group');
       setAddingMember(false);
     }

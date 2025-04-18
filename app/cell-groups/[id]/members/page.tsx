@@ -76,7 +76,7 @@ export default function CellGroupMembersPage() {
         setMembers(processedMembers.filter(m => m.is_member));
         setAvailableMembers(processedMembers.filter(m => !m.is_member));
       } catch (error: any) {
-        console.error('Error fetching data:', error);
+        
         setError(error.message || 'Failed to load data');
       } finally {
         setLoading(false);
@@ -117,7 +117,7 @@ export default function CellGroupMembersPage() {
       setAvailableMembers(availableMembers.filter(m => !selectedMembers.includes(m.id)));
       setSelectedMembers([]);
     } catch (error: any) {
-      console.error('Error adding members:', error);
+      
       setError(error.message || 'Failed to add members');
     } finally {
       setSaving(false);
@@ -147,7 +147,7 @@ export default function CellGroupMembersPage() {
         setAvailableMembers([...availableMembers, { ...removedMember, is_member: false }]);
       }
     } catch (error: any) {
-      console.error('Error removing member:', error);
+      
       setError(error.message || 'Failed to remove member');
     } finally {
       setSaving(false);

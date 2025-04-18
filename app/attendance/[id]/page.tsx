@@ -138,7 +138,7 @@ export default function AttendanceDetailPage() {
 
         setLoading(false);
       } catch (error: any) {
-        console.error('Error fetching attendance data:', error);
+        
         setError(error.message || 'Failed to load attendance data');
         setLoading(false);
       }

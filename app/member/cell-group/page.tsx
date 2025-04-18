@@ -131,7 +131,7 @@ export default function MemberCellGroup() {
       });
       
     } catch (error) {
-      console.error('Error fetching cell group data:', error);
+      
     } finally {
       setLoading(false);
     }

@@ -85,7 +85,7 @@ function ScanPageContent() {
           setContextOptions([]);
         }
       } catch (error) {
-        console.error('Error fetching context options:', error);
+        
       } finally {
         setLoadingContexts(false);
       }
@@ -148,7 +148,7 @@ function ScanPageContent() {
       setTimeout(() => setScanSuccess(null), 2000);
 
     } catch (error: any) {
-      console.error('Error processing scan:', error);
+      
       setScanError(error.message || 'Error processing scan');
     }
   };
@@ -242,7 +242,7 @@ function ScanPageContent() {
       }, 1500);
 
     } catch (error: any) {
-      console.error('Error saving attendance:', error);
+      
       setSaveError(error.message || 'Failed to save attendance record');
     } finally {
       setIsSaving(false);

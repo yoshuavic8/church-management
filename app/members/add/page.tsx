@@ -29,7 +29,7 @@ function AddMemberContent() {
           if (error) throw error;
           setVisitorData(data);
         } catch (error: any) {
-          console.error('Error fetching visitor data:', error);
+          
           setError(error.message || 'Failed to fetch visitor data');
         } finally {
           setLoading(false);

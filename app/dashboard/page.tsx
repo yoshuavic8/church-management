@@ -34,15 +34,15 @@ function DashboardContent() {
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        console.log('Fetching dashboard stats...');
+
         const supabase = getSupabaseClient();
 
         if (!user) {
-          console.error('No user in auth context');
+
           throw new Error('Authentication required. Please login.');
         }
 
-        console.log('User authenticated, ID:', user.id);
+
 
         // Fetch actual counts from Supabase
         const { count: membersCount, error: membersError } = await supabase
@@ -50,44 +50,44 @@ function DashboardContent() {
           .select('*', { count: 'exact', head: true });
 
         if (membersError) {
-          console.error('Error fetching members count:', membersError);
+
           throw membersError;
         }
 
-        console.log('Members count:', membersCount);
+
 
         const { count: cellGroupsCount, error: cellGroupsError } = await supabase
           .from('cell_groups')
           .select('*', { count: 'exact', head: true });
 
         if (cellGroupsError) {
-          console.error('Error fetching cell groups count:', cellGroupsError);
+
           throw cellGroupsError;
         }
 
-        console.log('Cell groups count:', cellGroupsCount);
+
 
         const { count: districtsCount, error: districtsError } = await supabase
           .from('districts')
           .select('*', { count: 'exact', head: true });
 
         if (districtsError) {
-          console.error('Error fetching districts count:', districtsError);
+
           throw districtsError;
         }
 
-        console.log('Districts count:', districtsCount);
+
 
         const { count: ministriesCount, error: ministriesError } = await supabase
           .from('ministries')
           .select('*', { count: 'exact', head: true });
 
         if (ministriesError) {
-          console.error('Error fetching ministries count:', ministriesError);
+
           throw ministriesError;
         }
 
-        console.log('Ministries count:', ministriesCount);
+
 
         // For now, we'll keep using placeholder data for classes and services
         setStats({
@@ -99,9 +99,9 @@ function DashboardContent() {
           upcomingServices: 8, // Placeholder
         });
 
-        console.log('Dashboard stats set successfully');
+
       } catch (error: any) {
-        console.error('Error fetching dashboard stats:', error);
+
         setError(error.message || 'Failed to fetch dashboard stats');
       } finally {
         setLoading(false);

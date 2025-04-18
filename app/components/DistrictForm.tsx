@@ -48,7 +48,7 @@ export default function DistrictForm({ initialData = {}, mode }: DistrictFormPro
 
         setMembers(data || []);
       } catch (error: any) {
-        console.error('Error fetching members:', error);
+
         setError(error.message || 'Failed to load members');
       }
     };
@@ -85,7 +85,7 @@ export default function DistrictForm({ initialData = {}, mode }: DistrictFormPro
 
         if (error) throw error;
 
-        console.log('District added successfully');
+
       } else {
         // Update existing district
         const { error } = await supabase
@@ -95,7 +95,7 @@ export default function DistrictForm({ initialData = {}, mode }: DistrictFormPro
 
         if (error) throw error;
 
-        console.log('District updated successfully');
+
       }
 
       // Redirect to districts list

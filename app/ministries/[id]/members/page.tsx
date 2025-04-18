@@ -96,7 +96,7 @@ function ManageMinistryMembersContent() {
         // Set available members (those not already in the ministry)
         setAvailableMembers(processedAllMembers.filter(m => !m.is_member));
       } catch (error: any) {
-        console.error('Error fetching data:', error);
+        
         setError(error.message || 'Failed to load data');
       } finally {
         setLoading(false);
@@ -155,7 +155,7 @@ function ManageMinistryMembersContent() {
       setSelectedMembers([]);
       setSuccess(`${newMembers.length} member(s) added to ministry`);
     } catch (error: any) {
-      console.error('Error adding members:', error);
+      
       setError(error.message || 'Failed to add members');
     } finally {
       setSaving(false);
@@ -198,7 +198,7 @@ function ManageMinistryMembersContent() {
         setSuccess('Member removed from ministry');
       }
     } catch (error: any) {
-      console.error('Error removing member:', error);
+      
       setError(error.message || 'Failed to remove member');
     } finally {
       setSaving(false);
@@ -228,7 +228,7 @@ function ManageMinistryMembersContent() {
         )
       );
     } catch (error: any) {
-      console.error('Error updating role:', error);
+      
       setError(error.message || 'Failed to update role');
     } finally {
       setSaving(false);

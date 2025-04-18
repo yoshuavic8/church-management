@@ -21,7 +21,7 @@ export default function ResetPasswordPage() {
       const { data, error } = await supabase.auth.getSession();
       
       if (error) {
-        console.error('Error getting session:', error);
+        
         setError('Unable to verify your session. Please try again or request a new password reset link.');
         return;
       }
@@ -102,7 +102,7 @@ export default function ResetPasswordPage() {
       }, 3000);
       
     } catch (error: any) {
-      console.error('Error resetting password:', error);
+      
       setError(error.message || 'Failed to reset password');
     } finally {
       setLoading(false);

@@ -53,7 +53,7 @@ const QRCodeScanner = ({
         }
       })
       .catch((err) => {
-        console.error('Error getting cameras', err);
+        
         setHasCamera(false);
         if (err.name === 'NotAllowedError') {
           setPermissionDenied(true);
@@ -64,7 +64,7 @@ const QRCodeScanner = ({
     return () => {
       if (scannerRef.current && isScanning) {
         scannerRef.current.stop()
-          .catch(err => console.error('Error stopping scanner:', err));
+          .catch(err => 
       }
     };
   }, []);
@@ -96,7 +96,7 @@ const QRCodeScanner = ({
       setIsScanning(true);
     })
     .catch((err) => {
-      console.error('Error starting scanner:', err);
+      
       if (err.name === 'NotAllowedError') {
         setPermissionDenied(true);
       }
@@ -110,7 +110,7 @@ const QRCodeScanner = ({
           setIsScanning(false);
         })
         .catch(err => {
-          console.error('Error stopping scanner:', err);
+          
         });
     }
   };
@@ -126,7 +126,7 @@ const QRCodeScanner = ({
           setSelectedDeviceId(deviceId);
           setTimeout(() => startScanner(), 300); // Small delay to ensure clean restart
         })
-        .catch(err => console.error('Error switching camera:', err));
+        .catch(err => 
     }
   };
 

@@ -88,7 +88,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(null);
       setIsAdminUser(false);
     } catch (error) {
-      console.error('Error refreshing user:', error);
+      
       setUser(null);
       setIsAdminUser(false);
     }
@@ -144,7 +144,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         error: 'Login failed. Please try again.' 
       };
     } catch (error: any) {
-      console.error('Login error:', error);
+      
       return { 
         success: false, 
         error: error.message || 'Login failed. Please try again.' 
@@ -169,7 +169,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         error: 'Invalid or expired token. Please try again.' 
       };
     } catch (error: any) {
-      console.error('Member login error:', error);
+      
       return { 
         success: false, 
         error: error.message || 'Login failed. Please try again.' 

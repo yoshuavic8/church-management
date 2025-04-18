@@ -43,7 +43,7 @@ function MinistriesContent() {
 
         setMinistries(processedData);
       } catch (error: any) {
-        console.error('Error fetching ministries:', error);
+        
         setError(error.message || 'Failed to fetch ministries');
       } finally {
         setLoading(false);

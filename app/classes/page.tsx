@@ -85,7 +85,7 @@ export default function ClassesPage() {
 
         setClasses(mockClasses);
       } catch (error) {
-        console.error('Error fetching classes:', error);
+        
       } finally {
         setLoading(false);
       }

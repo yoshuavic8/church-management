@@ -95,7 +95,7 @@ export default function PastoralServicesPage() {
 
         setServices(mockServices);
       } catch (error) {
-        console.error('Error fetching pastoral services:', error);
+        
       } finally {
         setLoading(false);
       }

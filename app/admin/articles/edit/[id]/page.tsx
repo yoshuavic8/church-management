@@ -47,7 +47,7 @@ export default function EditArticle() {
       setCategories(uniqueCategories);
       
     } catch (error) {
-      console.error('Error fetching categories:', error);
+      
     }
   };
 
@@ -82,7 +82,7 @@ export default function EditArticle() {
       });
       
     } catch (error: any) {
-      console.error('Error fetching article details:', error);
+      
       setError(error.message || 'Failed to load article');
     } finally {
       setLoading(false);
@@ -157,7 +157,7 @@ export default function EditArticle() {
       }, 2000);
       
     } catch (error: any) {
-      console.error('Error updating article:', error);
+      
       setError(error.message || 'Failed to update article');
     } finally {
       setSaving(false);

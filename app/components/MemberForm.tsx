@@ -145,14 +145,14 @@ export default function MemberForm({ initialData = {}, mode }: MemberFormProps) 
         );
 
         if (resetError) {
-          console.error('Error sending password reset email:', resetError);
+
           // Don't throw here, as the member was already created successfully
           setShowPasswordInfo(true);
         } else {
           setSuccess('Member created successfully. Password reset email has been sent to ' + formData.email);
         }
 
-        console.log('Member added successfully');
+
 
         // If converting from visitor, update the visitor record
         if (isConvertingVisitor && initialData.visitor_id) {
@@ -166,7 +166,7 @@ export default function MemberForm({ initialData = {}, mode }: MemberFormProps) 
             .eq('id', initialData.visitor_id);
 
           if (visitorError) {
-            console.error('Error updating visitor record:', visitorError);
+
             // Don't throw here, as the member was already created successfully
           }
         }
@@ -179,7 +179,7 @@ export default function MemberForm({ initialData = {}, mode }: MemberFormProps) 
 
         if (error) throw error;
 
-        console.log('Member updated successfully');
+
       }
 
       // Show success message and delay redirect

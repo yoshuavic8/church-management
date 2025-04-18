@@ -112,7 +112,7 @@ export default function MemberDashboard() {
         setLatestNews(newsData || []);
 
       } catch (error) {
-        console.error('Error fetching member data:', error);
+        
       } finally {
         setLoading(false);
       }

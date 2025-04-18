@@ -49,7 +49,7 @@ export default function MembersPage() {
           setMembers([]);
         }
       } catch (error: any) {
-        console.error('Error fetching members:', error);
+        
         setError(error.message || 'Failed to fetch members');
       } finally {
         setLoading(false);
@@ -103,7 +103,7 @@ export default function MembersPage() {
       setShowConfirmModal(false);
       setMemberToDeactivate(null);
     } catch (error: any) {
-      console.error('Error deactivating member:', error);
+      
       setError(error.message || 'Failed to deactivate member');
     } finally {
       setDeactivating(false);

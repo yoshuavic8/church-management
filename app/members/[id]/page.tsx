@@ -95,7 +95,7 @@ export default function MemberDetailPage() {
           setCellGroup(cellGroupData);
         }
       } catch (error: any) {
-        console.error('Error fetching data:', error);
+        
         setError(error.message || 'Failed to fetch member data');
       } finally {
         setLoading(false);
@@ -159,7 +159,7 @@ export default function MemberDetailPage() {
 
       setResetPasswordSuccess(true);
     } catch (error: any) {
-      console.error('Error sending password reset email:', error);
+      
       setResetPasswordError(error.message || 'Failed to send password reset email');
     } finally {
       setResetPasswordLoading(false);

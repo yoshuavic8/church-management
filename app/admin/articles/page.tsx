@@ -36,7 +36,7 @@ export default function AdminArticles() {
       setCategories(uniqueCategories);
       
     } catch (error) {
-      console.error('Error fetching categories:', error);
+      
     }
   };
 
@@ -100,7 +100,7 @@ export default function AdminArticles() {
       setArticles(articlesWithAuthors);
       
     } catch (error) {
-      console.error('Error fetching articles:', error);
+      
       setArticles([]);
     } finally {
       setLoading(false);
@@ -155,7 +155,7 @@ export default function AdminArticles() {
       fetchArticles();
       
     } catch (error) {
-      console.error('Error toggling featured status:', error);
+      
     }
   };
 
@@ -176,7 +176,7 @@ export default function AdminArticles() {
       fetchArticles();
       
     } catch (error) {
-      console.error('Error toggling status:', error);
+      
     }
   };
 
@@ -199,7 +199,7 @@ export default function AdminArticles() {
       fetchArticles();
       
     } catch (error) {
-      console.error('Error deleting article:', error);
+      
     }
   };
 

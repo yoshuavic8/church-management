@@ -75,7 +75,7 @@ export default function ArticleDetail() {
       }
       
     } catch (error: any) {
-      console.error('Error fetching article details:', error);
+      
       setError(error.message || 'Failed to load article');
     } finally {
       setLoading(false);

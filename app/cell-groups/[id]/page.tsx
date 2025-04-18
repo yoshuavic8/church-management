@@ -139,7 +139,7 @@ export default function CellGroupDetailPage() {
 
         setMembers(filteredMembers);
       } catch (error: any) {
-        console.error('Error fetching cell group:', error);
+        
         setError(error.message || 'Failed to fetch cell group data');
       } finally {
         setLoading(false);

@@ -39,7 +39,7 @@ export default function MinistryForm({ ministry, isEdit = false }: MinistryFormP
         if (error) throw error;
         setMembers(data || []);
       } catch (error: any) {
-        console.error('Error fetching members:', error);
+        
         setError('Failed to load members. Please try again.');
       }
     };
@@ -94,7 +94,7 @@ export default function MinistryForm({ ministry, isEdit = false }: MinistryFormP
         setTimeout(() => router.push(`/ministries/${data[0].id}`), 1500);
       }
     } catch (error: any) {
-      console.error('Error saving ministry:', error);
+      
       setError(error.message || 'Failed to save ministry');
     } finally {
       setLoading(false);

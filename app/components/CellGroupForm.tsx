@@ -48,45 +48,45 @@ export default function CellGroupForm({ initialData = {}, mode }: CellGroupFormP
     const fetchData = async () => {
       try {
         const supabase = getSupabaseClient();
-        
+
         // Fetch districts
         const { data: districtsData, error: districtsError } = await supabase
           .from('districts')
           .select('id, name')
           .order('name', { ascending: true });
-        
+
         if (districtsError) throw districtsError;
-        
+
         // Fetch members
         const { data: membersData, error: membersError } = await supabase
           .from('members')
           .select('id, first_name, last_name')
           .order('last_name', { ascending: true });
-        
+
         if (membersError) throw membersError;
-        
+
         setDistricts(districtsData || []);
         setMembers(membersData || []);
-        
+
         // If editing, fetch current leaders
         if (mode === 'edit' && initialData.id) {
           const { data: leadersData, error: leadersError } = await supabase
             .from('cell_group_leaders')
             .select('member_id')
             .eq('cell_group_id', initialData.id);
-          
+
           if (leadersError) throw leadersError;
-          
+
           if (leadersData) {
             setSelectedLeaders(leadersData.map(leader => leader.member_id));
           }
         }
       } catch (error: any) {
-        console.error('Error fetching form data:', error);
+
         setError(error.message || 'Failed to load form data');
       }
     };
-    
+
     fetchData();
   }, [initialData.id, mode]);
 
@@ -107,19 +107,19 @@ export default function CellGroupForm({ initialData = {}, mode }: CellGroupFormP
 
     try {
       const supabase = getSupabaseClient();
-      
+
       if (mode === 'add') {
         // Insert new cell group
         const { data: cellGroupData, error: cellGroupError } = await supabase
           .from('cell_groups')
           .insert([formData])
           .select();
-        
+
         if (cellGroupError) throw cellGroupError;
-        
+
         if (cellGroupData && cellGroupData.length > 0) {
           const cellGroupId = cellGroupData[0].id;
-          
+
           // Add leaders
           if (selectedLeaders.length > 0) {
             const leaderEntries = selectedLeaders.map(memberId => ({
@@ -127,33 +127,33 @@ export default function CellGroupForm({ initialData = {}, mode }: CellGroupFormP
               member_id: memberId,
               role: 'leader'
             }));
-            
+
             const { error: leadersError } = await supabase
               .from('cell_group_leaders')
               .insert(leaderEntries);
-            
+
             if (leadersError) throw leadersError;
           }
         }
-        
-        console.log('Cell group added successfully');
+
+
       } else {
         // Update existing cell group
         const { error: cellGroupError } = await supabase
           .from('cell_groups')
           .update(formData)
           .eq('id', initialData.id!);
-        
+
         if (cellGroupError) throw cellGroupError;
-        
+
         // Delete existing leaders
         const { error: deleteLeadersError } = await supabase
           .from('cell_group_leaders')
           .delete()
           .eq('cell_group_id', initialData.id!);
-        
+
         if (deleteLeadersError) throw deleteLeadersError;
-        
+
         // Add new leaders
         if (selectedLeaders.length > 0) {
           const leaderEntries = selectedLeaders.map(memberId => ({
@@ -161,15 +161,15 @@ export default function CellGroupForm({ initialData = {}, mode }: CellGroupFormP
             member_id: memberId,
             role: 'leader'
           }));
-          
+
           const { error: leadersError } = await supabase
             .from('cell_group_leaders')
             .insert(leaderEntries);
-          
+
           if (leadersError) throw leadersError;
         }
-        
-        console.log('Cell group updated successfully');
+
+
       }
 
       // Redirect to cell groups list
@@ -188,7 +188,7 @@ export default function CellGroupForm({ initialData = {}, mode }: CellGroupFormP
           {error}
         </div>
       )}
-      
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div>
           <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">
@@ -204,7 +204,7 @@ export default function CellGroupForm({ initialData = {}, mode }: CellGroupFormP
             className="input-field"
           />
         </div>
-        
+
         <div>
           <label htmlFor="district_id" className="block text-sm font-medium text-gray-700 mb-1">
             District *
@@ -225,7 +225,7 @@ export default function CellGroupForm({ initialData = {}, mode }: CellGroupFormP
             ))}
           </select>
         </div>
-        
+
         <div>
           <label htmlFor="meeting_day" className="block text-sm font-medium text-gray-700 mb-1">
             Meeting Day
@@ -247,7 +247,7 @@ export default function CellGroupForm({ initialData = {}, mode }: CellGroupFormP
             <option value="Sunday">Sunday</option>
           </select>
         </div>
-        
+
         <div>
           <label htmlFor="meeting_time" className="block text-sm font-medium text-gray-700 mb-1">
             Meeting Time
@@ -261,7 +261,7 @@ export default function CellGroupForm({ initialData = {}, mode }: CellGroupFormP
             className="input-field"
           />
         </div>
-        
+
         <div className="md:col-span-2">
           <label htmlFor="location" className="block text-sm font-medium text-gray-700 mb-1">
             Location
@@ -275,7 +275,7 @@ export default function CellGroupForm({ initialData = {}, mode }: CellGroupFormP
             className="input-field"
           />
         </div>
-        
+
         <div>
           <label htmlFor="status" className="block text-sm font-medium text-gray-700 mb-1">
             Status *
@@ -292,7 +292,7 @@ export default function CellGroupForm({ initialData = {}, mode }: CellGroupFormP
             <option value="inactive">Inactive</option>
           </select>
         </div>
-        
+
         <div>
           <label htmlFor="leaders" className="block text-sm font-medium text-gray-700 mb-1">
             Leaders (1-2 people)
@@ -313,7 +313,7 @@ export default function CellGroupForm({ initialData = {}, mode }: CellGroupFormP
           <p className="text-xs text-gray-500 mt-1">Hold Ctrl/Cmd to select multiple leaders</p>
         </div>
       </div>
-      
+
       <div className="flex justify-end space-x-3">
         <button
           type="button"

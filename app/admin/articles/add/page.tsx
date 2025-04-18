@@ -42,7 +42,7 @@ export default function AddArticle() {
       setCategories(uniqueCategories);
       
     } catch (error) {
-      console.error('Error fetching categories:', error);
+      
     }
   };
 
@@ -134,7 +134,7 @@ export default function AddArticle() {
       }, 2000);
       
     } catch (error: any) {
-      console.error('Error creating article:', error);
+      
       setError(error.message || 'Failed to create article');
     } finally {
       setLoading(false);

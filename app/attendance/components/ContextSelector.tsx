@@ -90,7 +90,7 @@ export default function ContextSelector({
           break;
       }
       
-      if (error) console.error(`Error fetching options for ${category}:`, error);
+      if (error) 
       setOptions(data);
       setLoading(false);
       

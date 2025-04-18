@@ -35,7 +35,7 @@ const QRCodeGenerator = ({
           },
         });
       } catch (error) {
-        console.error('Error generating QR code:', error);
+        
       }
     };
 

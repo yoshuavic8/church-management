@@ -73,7 +73,7 @@ export default function DistrictsPage() {
               .select('*', { count: 'exact', head: true })
               .eq('district_id', district.id);
 
-            if (cellGroupError) console.error('Error fetching cell group count:', cellGroupError);
+            if (cellGroupError) 
 
             // Get member count (sum of all members in cell groups of this district)
             let memberCount = 0;
@@ -113,7 +113,7 @@ export default function DistrictsPage() {
           setDistricts([]);
         }
       } catch (error: any) {
-        console.error('Error fetching districts:', error);
+        
         setError(error.message || 'Failed to fetch districts');
       } finally {
         setLoading(false);

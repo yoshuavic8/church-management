@@ -224,7 +224,7 @@ export default function CellGroupLeaderDashboard() {
         averageAttendance
       });
     } catch (error: any) {
-      console.error('Error fetching data:', error);
+      
     } finally {
       setLoading(false);
     }

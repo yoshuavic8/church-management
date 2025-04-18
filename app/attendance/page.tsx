@@ -217,7 +217,7 @@ function AttendanceContent() {
                   cellGroupData = { name: contextName };
                 }
               } catch (error) {
-                console.error('Error fetching cell group name:', error);
+                
               }
             }
           } else if (eventCategory === 'ministry' && meeting.ministry_id) {
@@ -242,7 +242,7 @@ function AttendanceContent() {
                   ministryData = { name: contextName };
                 }
               } catch (error) {
-                console.error('Error fetching ministry name:', error);
+                
               }
             }
           } else {
@@ -280,7 +280,7 @@ function AttendanceContent() {
         // Calculate statistics for current month only
         calculateCurrentMonthStats(recordsWithStats);
       } catch (error) {
-        console.error('Error fetching attendance records:', error);
+        
       } finally {
         setLoading(false);
       }
@@ -476,7 +476,7 @@ function AttendanceContent() {
 
     // Check if the record date is in the future
     if (recordDate > now) {
-      console.log('Future date detected:', dateString);
+
       return false; // Don't show future dates in time filters
     }
 

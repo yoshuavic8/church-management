@@ -67,7 +67,7 @@ export default function DistrictDetailPage() {
             .single();
 
           if (leader1Error) {
-            console.error('Error fetching leader 1:', leader1Error);
+            
           } else {
             setLeader1(leader1Data);
           }
@@ -82,7 +82,7 @@ export default function DistrictDetailPage() {
             .single();
 
           if (leader2Error) {
-            console.error('Error fetching leader 2:', leader2Error);
+            
           } else {
             setLeader2(leader2Data);
           }
@@ -112,7 +112,7 @@ export default function DistrictDetailPage() {
 
         setCellGroups(cellGroupsWithCounts);
       } catch (error: any) {
-        console.error('Error fetching district:', error);
+        
         setError(error.message || 'Failed to fetch district data');
       } finally {
         setLoading(false);

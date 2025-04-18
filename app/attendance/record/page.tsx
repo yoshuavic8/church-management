@@ -103,7 +103,7 @@ function RecordAttendanceContent() {
           setLoading(false);
         }
       } catch (error: any) {
-        console.error('Error fetching data:', error);
+        
         setError(error.message || 'Failed to load data');
         setLoading(false);
       }
@@ -196,7 +196,7 @@ function RecordAttendanceContent() {
       setParticipants(initialParticipants);
       setLoading(false);
     } catch (error: any) {
-      console.error('Error fetching cell group members:', error);
+      
       setError(error.message || 'Failed to load cell group members');
       setLoading(false);
     }
@@ -254,7 +254,7 @@ function RecordAttendanceContent() {
       setParticipants(initialParticipants);
       setLoading(false);
     } catch (error: any) {
-      console.error('Error fetching ministry members:', error);
+      
       setError(error.message || 'Failed to load ministry members');
       setLoading(false);
     }
@@ -405,7 +405,7 @@ function RecordAttendanceContent() {
       }, 1500);
 
     } catch (error: any) {
-      console.error('Error saving attendance:', error);
+      
       setError(error.message || 'Failed to save attendance record');
       setSaving(false);
     }

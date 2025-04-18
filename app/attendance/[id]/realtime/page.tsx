@@ -42,7 +42,7 @@ export default function RealtimeDashboardPage() {
         setMeeting(data);
         setIsRealtime(data.is_realtime || false);
       } catch (error: any) {
-        console.error('Error fetching meeting:', error);
+        
         setError(error.message || 'Failed to fetch meeting details');
       } finally {
         setLoading(false);
@@ -65,7 +65,7 @@ export default function RealtimeDashboardPage() {
       
       setIsRealtime(!isRealtime);
     } catch (error: any) {
-      console.error('Error toggling realtime:', error);
+      
       alert('Failed to update realtime status: ' + error.message);
     }
   };

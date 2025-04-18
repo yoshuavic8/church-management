@@ -35,7 +35,7 @@ export default function MemberLayout({
           }
         }
       } catch (error) {
-        console.error('Error fetching user profile:', error);
+        
       } finally {
         setLoading(false);
       }

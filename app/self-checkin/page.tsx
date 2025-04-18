@@ -42,7 +42,7 @@ function SelfCheckinContent() {
             checkInMember(user.id);
           }
         } catch (error) {
-          console.error('Error checking logged in user:', error);
+          
         }
       }
     };
@@ -81,7 +81,7 @@ function SelfCheckinContent() {
       setMeeting(data);
       setStep('enter-member-id');
     } catch (error: any) {
-      console.error('Error fetching meeting:', error);
+      
       setError(error.message || 'Failed to fetch meeting details');
     } finally {
       setLoading(false);
@@ -101,7 +101,7 @@ function SelfCheckinContent() {
 
       fetchMeetingDetails(meetingParam);
     } catch (error: any) {
-      console.error('Error processing meeting QR code:', error);
+      
       setError('Invalid QR code format. Please scan a valid meeting QR code.');
     }
   };
@@ -208,7 +208,7 @@ function SelfCheckinContent() {
       setSuccess('Check-in successful!');
       setStep('success');
     } catch (error: any) {
-      console.error('Error checking in:', error);
+      
       setError(error.message || 'Failed to check in');
     } finally {
       setLoading(false);

@@ -91,7 +91,7 @@ export default function RoleManagement() {
       if (districtsError) throw districtsError;
       setDistricts(districtsData || []);
     } catch (error: any) {
-      console.error('Error fetching data:', error);
+      
     } finally {
       setLoading(false);
     }
@@ -231,7 +231,7 @@ export default function RoleManagement() {
       // Refresh user list
       fetchData();
     } catch (error: any) {
-      console.error('Error updating role:', error);
+      
       setUpdateError(error.message || 'Failed to update role');
     } finally {
       setUpdateLoading(false);

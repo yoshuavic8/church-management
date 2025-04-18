@@ -73,7 +73,7 @@ const RealtimeAttendanceStats = ({ meetingId }: RealtimeAttendanceStatsProps) =>
         
         setLastUpdate(new Date());
       } catch (error: any) {
-        console.error('Error fetching attendance stats:', error);
+        
         setError(error.message || 'Failed to fetch attendance stats');
       } finally {
         setLoading(false);

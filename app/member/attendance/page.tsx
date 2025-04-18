@@ -102,7 +102,7 @@ export default function MemberAttendance() {
       });
       
     } catch (error) {
-      console.error('Error fetching attendance records:', error);
+      
     } finally {
       setLoading(false);
     }

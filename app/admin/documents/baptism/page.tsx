@@ -57,7 +57,7 @@ export default function BaptismCertificatePage() {
 
         setMembers(mockMembers);
       } catch (error) {
-        console.error('Error fetching members:', error);
+        
       } finally {
         setLoading(false);
       }
@@ -115,7 +115,7 @@ export default function BaptismCertificatePage() {
       alert('Baptism certificate generated successfully!');
       router.push('/admin');
     } catch (error) {
-      console.error('Error generating certificate:', error);
+      
       alert('Failed to generate certificate');
     } finally {
       setGenerating(false);
