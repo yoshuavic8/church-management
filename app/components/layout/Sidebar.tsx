@@ -2,16 +2,22 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useState, useEffect } from 'react';
+import { useEffect } from 'react';
 
 interface SidebarProps {
   sidebarOpen: boolean;
   setSidebarOpen: (open: boolean) => void;
+  sidebarExpanded: boolean;
+  setSidebarExpanded: (expanded: boolean) => void;
 }
 
-const Sidebar = ({ sidebarOpen, setSidebarOpen }: SidebarProps) => {
+const Sidebar = ({
+  sidebarOpen,
+  setSidebarOpen,
+  sidebarExpanded,
+  setSidebarExpanded
+}: SidebarProps) => {
   const pathname = usePathname();
-  const [sidebarExpanded, setSidebarExpanded] = useState(true);
 
   // Close sidebar when clicking outside
   useEffect(() => {
@@ -38,22 +44,9 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }: SidebarProps) => {
     return () => document.removeEventListener('keydown', keyHandler);
   }, [sidebarOpen, setSidebarOpen]);
 
-  // Set sidebar expanded based on localStorage
-  useEffect(() => {
-    const storedSidebarExpanded = localStorage.getItem('sidebar-expanded');
-    setSidebarExpanded(
-      storedSidebarExpanded === null ? true : storedSidebarExpanded === 'true'
-    );
-  }, []);
-
-  // Update localStorage when sidebar expanded state changes
-  useEffect(() => {
-    localStorage.setItem('sidebar-expanded', sidebarExpanded.toString());
-  }, [sidebarExpanded]);
-
   return (
     <aside
-      className={`absolute left-0 top-0 z-9999 flex h-screen w-72 flex-col overflow-y-hidden bg-white duration-300 ease-in-out dark:bg-gray-dark lg:static lg:translate-x-0 ${
+      className={`sidebar absolute left-0 top-0 z-9999 flex h-screen flex-col overflow-y-hidden bg-white transition-all duration-300 ease-in-out dark:bg-gray-dark lg:static lg:translate-x-0 ${
         sidebarOpen ? 'translate-x-0' : '-translate-x-full'
       } ${sidebarExpanded ? 'w-72' : 'w-20'}`}
     >
@@ -70,7 +63,9 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }: SidebarProps) => {
 
         <button
           onClick={() => setSidebarExpanded(!sidebarExpanded)}
-          className="hidden lg:block"
+          className="hidden rounded-md p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 lg:block"
+          aria-label={sidebarExpanded ? 'Collapse Sidebar' : 'Expand Sidebar'}
+          title={sidebarExpanded ? 'Collapse Sidebar' : 'Expand Sidebar'}
         >
           <svg
             className={`h-6 w-6 text-gray-500 transition-transform ${
@@ -92,10 +87,11 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }: SidebarProps) => {
 
         <button
           onClick={() => setSidebarOpen(!sidebarOpen)}
-          className="block lg:hidden"
+          className="flex items-center gap-1 rounded-md px-2 py-1 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 lg:hidden"
+          aria-label="Close Navigation Menu"
         >
           <svg
-            className="h-6 w-6 text-gray-500"
+            className="h-5 w-5"
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -108,6 +104,7 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }: SidebarProps) => {
               d="M6 18L18 6M6 6l12 12"
             />
           </svg>
+          <span className="text-xs font-medium">Close</span>
         </button>
       </div>
 
@@ -129,6 +126,7 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }: SidebarProps) => {
                       ? 'menu-item-active'
                       : 'menu-item-inactive'
                   }`}
+
                 >
                   <svg
                     className={`h-5 w-5 ${
@@ -161,6 +159,7 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }: SidebarProps) => {
                       ? 'menu-item-active'
                       : 'menu-item-inactive'
                   }`}
+
                 >
                   <svg
                     className={`h-5 w-5 ${
@@ -193,6 +192,7 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }: SidebarProps) => {
                       ? 'menu-item-active'
                       : 'menu-item-inactive'
                   }`}
+
                 >
                   <svg
                     className={`h-5 w-5 ${
@@ -225,6 +225,7 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }: SidebarProps) => {
                       ? 'menu-item-active'
                       : 'menu-item-inactive'
                   }`}
+
                 >
                   <svg
                     className={`h-5 w-5 ${
@@ -257,6 +258,7 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }: SidebarProps) => {
                       ? 'menu-item-active'
                       : 'menu-item-inactive'
                   }`}
+
                 >
                   <svg
                     className={`h-5 w-5 ${
@@ -311,6 +313,46 @@ const Sidebar = ({ sidebarOpen, setSidebarOpen }: SidebarProps) => {
                   <span className={`${!sidebarExpanded && 'hidden'}`}>Ministries</span>
                 </Link>
               </li>
+
+              {/* Administration */}
+              <li>
+                <Link
+                  href="/admin"
+                  className={`menu-item group ${
+                    pathname === '/admin'
+                      ? 'menu-item-active'
+                      : 'menu-item-inactive'
+                  }`}
+                >
+                  <svg
+                    className={`h-5 w-5 ${
+                      pathname === '/admin'
+                        ? 'menu-item-icon-active'
+                        : 'menu-item-icon-inactive'
+                    }`}
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+                    />
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                    />
+                  </svg>
+                  <span className={`${!sidebarExpanded && 'hidden'}`}>Administration</span>
+                </Link>
+              </li>
+
+
 
               {/* Scan */}
               <li>

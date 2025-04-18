@@ -78,14 +78,21 @@ function DashboardContent() {
 
 
 
-        const { count: ministriesCount, error: ministriesError } = await supabase
-          .from('ministries')
-          .select('*', { count: 'exact', head: true });
+        // Ministries count
+        let ministriesCount = 0;
+        try {
+          const { count, error } = await supabase
+            .from('ministries')
+            .select('*', { count: 'exact', head: true });
 
-        if (ministriesError) {
-
-          throw ministriesError;
+          if (error) throw error;
+          ministriesCount = count || 0;
+        } catch (err) {
+          console.error('Error fetching ministries count:', err);
+          // Continue with other stats even if this fails
         }
+
+        // Error handling is done in the try-catch block above
 
 
 

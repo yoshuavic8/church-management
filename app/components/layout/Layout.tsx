@@ -10,6 +10,20 @@ interface LayoutProps {
 
 const Layout = ({ children }: LayoutProps) => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarExpanded, setSidebarExpanded] = useState(true);
+
+  // Initialize sidebar expanded state from localStorage
+  useEffect(() => {
+    const storedSidebarExpanded = localStorage.getItem('sidebar-expanded');
+    setSidebarExpanded(
+      storedSidebarExpanded === null ? true : storedSidebarExpanded === 'true'
+    );
+  }, []);
+
+  // Update localStorage when sidebar expanded state changes
+  useEffect(() => {
+    localStorage.setItem('sidebar-expanded', sidebarExpanded.toString());
+  }, [sidebarExpanded]);
 
   // Close sidebar when screen size changes
   useEffect(() => {
@@ -24,9 +38,14 @@ const Layout = ({ children }: LayoutProps) => {
   }, []);
 
   return (
-    <div className="flex h-screen overflow-hidden">
+    <div className="flex h-screen overflow-hidden bg-gray-50 dark:bg-gray-900">
       {/* Sidebar */}
-      <Sidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
+      <Sidebar
+        sidebarOpen={sidebarOpen}
+        setSidebarOpen={setSidebarOpen}
+        sidebarExpanded={sidebarExpanded}
+        setSidebarExpanded={setSidebarExpanded}
+      />
 
       {/* Backdrop */}
       {sidebarOpen && (
@@ -37,14 +56,36 @@ const Layout = ({ children }: LayoutProps) => {
       )}
 
       {/* Content area */}
-      <div className="relative flex flex-1 flex-col overflow-y-auto overflow-x-hidden">
+      <div className="relative flex flex-1 flex-col overflow-y-auto overflow-x-hidden transition-all duration-300">
         {/* Header */}
         <Header sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
 
         {/* Main content */}
-        <main className="mx-auto w-full max-w-screen-2xl p-4 md:p-6 2xl:p-10">
+        <main className="mx-auto w-full max-w-screen-2xl p-2 md:p-4 lg:p-6 2xl:p-8">
           {children}
         </main>
+
+        {/* Mobile Navigation Floating Button */}
+        <button
+          onClick={() => setSidebarOpen(true)}
+          className="mobile-nav-button"
+          aria-label="Open Navigation Menu"
+        >
+          <svg
+            className="h-6 w-6"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M4 6h16M4 12h16M4 18h16"
+            />
+          </svg>
+        </button>
       </div>
     </div>
   );

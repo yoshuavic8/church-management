@@ -2,62 +2,68 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import Layout from '@/app/components/layout/Layout';
+import ProtectedRoute from '../components/ProtectedRoute';
 
 export default function AdminPage() {
   const [activeTab, setActiveTab] = useState('documents');
 
   return (
-    <div>
-      <h1 className="text-3xl font-bold mb-6">Administration</h1>
-
-      <div className="mb-6 border-b border-gray-200">
-        <nav className="flex space-x-8">
-          <button
-            onClick={() => setActiveTab('documents')}
-            className={`py-4 px-1 border-b-2 font-medium text-sm ${
-              activeTab === 'documents'
-                ? 'border-primary text-primary'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-            }`}
-          >
-            Documents
-          </button>
-          <button
-            onClick={() => setActiveTab('content')}
-            className={`py-4 px-1 border-b-2 font-medium text-sm ${
-              activeTab === 'content'
-                ? 'border-primary text-primary'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-            }`}
-          >
-            Content Management
-          </button>
-          <button
-            onClick={() => setActiveTab('users')}
-            className={`py-4 px-1 border-b-2 font-medium text-sm ${
-              activeTab === 'users'
-                ? 'border-primary text-primary'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-            }`}
-          >
-            User Management
-          </button>
-          <button
-            onClick={() => setActiveTab('settings')}
-            className={`py-4 px-1 border-b-2 font-medium text-sm ${
-              activeTab === 'settings'
-                ? 'border-primary text-primary'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-            }`}
-          >
-            Settings
-          </button>
-        </nav>
-      </div>
-
-      {activeTab === 'documents' && (
+    <ProtectedRoute adminOnly={true}>
+      <Layout>
         <div>
-          <div className="card">
+          <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between">
+            <h1 className="text-2xl font-semibold text-gray-800 dark:text-white/90">Administration</h1>
+          </div>
+
+          <div className="mb-6 border-b border-gray-200 dark:border-gray-700">
+            <nav className="flex space-x-8">
+              <button
+                onClick={() => setActiveTab('documents')}
+                className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                  activeTab === 'documents'
+                    ? 'border-primary text-primary dark:border-primary-400 dark:text-primary-400'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300 dark:hover:border-gray-600'
+                }`}
+              >
+                Documents
+              </button>
+              <button
+                onClick={() => setActiveTab('content')}
+                className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                  activeTab === 'content'
+                    ? 'border-primary text-primary dark:border-primary-400 dark:text-primary-400'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300 dark:hover:border-gray-600'
+                }`}
+              >
+                Content Management
+              </button>
+              <button
+                onClick={() => setActiveTab('users')}
+                className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                  activeTab === 'users'
+                    ? 'border-primary text-primary dark:border-primary-400 dark:text-primary-400'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300 dark:hover:border-gray-600'
+                }`}
+              >
+                User Management
+              </button>
+              <button
+                onClick={() => setActiveTab('settings')}
+                className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                  activeTab === 'settings'
+                    ? 'border-primary text-primary dark:border-primary-400 dark:text-primary-400'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300 dark:hover:border-gray-600'
+                }`}
+              >
+                Settings
+              </button>
+            </nav>
+          </div>
+
+          {activeTab === 'documents' && (
+            <div>
+              <div className="rounded-lg border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-800">
             <h2 className="text-xl font-semibold mb-4">Generate Documents</h2>
             <p className="text-gray-600 mb-6">
               Generate official church documents for members. Select a document type below.
@@ -193,9 +199,9 @@ export default function AdminPage() {
         </div>
       )}
 
-      {activeTab === 'content' && (
-        <div>
-          <div className="card">
+          {activeTab === 'content' && (
+            <div>
+              <div className="rounded-lg border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-800">
             <h2 className="text-xl font-semibold mb-4">Content Management</h2>
             <p className="text-gray-600 mb-6">
               Manage content for the church website and member portal.
@@ -313,8 +319,8 @@ export default function AdminPage() {
         </div>
       )}
 
-      {activeTab === 'users' && (
-        <div className="card">
+          {activeTab === 'users' && (
+            <div className="rounded-lg border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-800">
           <h2 className="text-xl font-semibold mb-4">User Management</h2>
           <p className="text-gray-600 mb-6">
             Manage user accounts and permissions for the church management system.
@@ -395,8 +401,8 @@ export default function AdminPage() {
         </div>
       )}
 
-      {activeTab === 'settings' && (
-        <div className="card">
+          {activeTab === 'settings' && (
+            <div className="rounded-lg border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-800">
           <h2 className="text-xl font-semibold mb-4">System Settings</h2>
           <p className="text-gray-600 mb-6">
             Configure system settings for the church management application.
@@ -514,6 +520,8 @@ export default function AdminPage() {
           </div>
         </div>
       )}
-    </div>
+          </div>
+      </Layout>
+    </ProtectedRoute>
   );
 }

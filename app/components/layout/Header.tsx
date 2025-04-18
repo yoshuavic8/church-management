@@ -55,7 +55,8 @@ const Header = ({ sidebarOpen, setSidebarOpen }: HeaderProps) => {
           {/* Sidebar toggle button */}
           <button
             onClick={() => setSidebarOpen(!sidebarOpen)}
-            className="z-99999 block rounded-sm border border-gray-200 bg-white p-1.5 shadow-sm dark:border-gray-700 dark:bg-gray-800 lg:hidden"
+            className="z-99999 flex items-center gap-1.5 rounded-sm border border-gray-200 bg-white p-1.5 shadow-sm dark:border-gray-700 dark:bg-gray-800 lg:hidden"
+            aria-label="Toggle Navigation Menu"
           >
             <svg
               className="h-5 w-5 text-gray-600 dark:text-gray-400"
@@ -71,6 +72,7 @@ const Header = ({ sidebarOpen, setSidebarOpen }: HeaderProps) => {
                 d="M4 6h16M4 12h16M4 18h16"
               />
             </svg>
+            <span className="text-xs font-medium text-gray-600 dark:text-gray-400">Menu</span>
           </button>
 
           {/* Logo for mobile */}
