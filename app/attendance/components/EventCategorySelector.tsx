@@ -7,8 +7,8 @@ type EventCategorySelectorProps = {
   disabled?: boolean;
 };
 
-export default function EventCategorySelector({ 
-  value, 
+export default function EventCategorySelector({
+  value,
   onChange,
   disabled = false
 }: EventCategorySelectorProps) {
@@ -19,12 +19,9 @@ export default function EventCategorySelector({
     { id: 'service', label: 'Church Service' },
     { id: 'other', label: 'Other Event' }
   ];
-  
+
   return (
-    <div className="mb-4">
-      <label className="block text-sm font-medium text-gray-700 mb-1">
-        Event Category *
-      </label>
+    <div>
       <div className="flex flex-wrap gap-2">
         {categories.map(category => (
           <button

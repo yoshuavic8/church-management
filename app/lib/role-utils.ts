@@ -16,9 +16,11 @@ export enum RoleLevel {
  * Context types for role-based access
  */
 export enum ContextType {
-  CellGroup = "cell_group_ids",
-  Ministry = "ministry_ids",
-  District = "district_ids",
+  None = "none",
+  CellGroup = "cell_group",
+  Ministry = "ministry",
+  District = "district",
+  Church = "church",
 }
 
 /**
@@ -75,14 +77,14 @@ export async function checkRoleAccess(
  */
 export function getRoleName(roleLevel: number): string {
   switch (roleLevel) {
-    case 1:
-      return "Member";
-    case 2:
-      return "Cell Group Leader";
-    case 3:
+    case RoleLevel.Admin:
+      return "Administrator";
+    case RoleLevel.MinistryLeader:
       return "Ministry Leader";
-    case 4:
-      return "Admin";
+    case RoleLevel.CellLeader:
+      return "Cell Group Leader";
+    case RoleLevel.Member:
+      return "Member";
     default:
       return "Member";
   }
@@ -94,20 +96,114 @@ export function getRoleName(roleLevel: number): string {
 export function getRoleLevel(roleName: string): number {
   switch (roleName.toLowerCase()) {
     case "member":
-      return 1;
+      return RoleLevel.Member;
     case "cell_leader":
     case "cell leader":
     case "cellleader":
     case "cell group leader":
-      return 2;
+      return RoleLevel.CellLeader;
     case "ministry_leader":
     case "ministry leader":
     case "ministryleader":
-      return 3;
+      return RoleLevel.MinistryLeader;
     case "admin":
     case "administrator":
-      return 4;
+      return RoleLevel.Admin;
     default:
-      return 1;
+      return RoleLevel.Member;
   }
+}
+
+/**
+ * Check if user has admin role
+ */
+export function isAdmin(user: any): boolean {
+  return user?.role_level === RoleLevel.Admin || user?.role === "admin";
+}
+
+/**
+ * Check if user has ministry leader role
+ */
+export function isMinistryLeader(user: any): boolean {
+  return (
+    user?.role_level === RoleLevel.MinistryLeader ||
+    user?.role_level === RoleLevel.Admin
+  );
+}
+
+/**
+ * Check if user has cell leader role
+ */
+export function isCellLeader(user: any): boolean {
+  return (
+    user?.role_level === RoleLevel.CellLeader ||
+    user?.role_level === RoleLevel.MinistryLeader ||
+    user?.role_level === RoleLevel.Admin
+  );
+}
+
+/**
+ * Check if user has permission for a specific context
+ */
+export function hasContextPermission(
+  user: any,
+  contextType: ContextType,
+  contextId: string
+): boolean {
+  if (isAdmin(user)) {
+    return true;
+  }
+
+  if (contextType === ContextType.CellGroup) {
+    // Check if user is leader of this cell group
+    return (
+      user?.cell_group_id === contextId &&
+      user?.role_level >= RoleLevel.CellLeader
+    );
+  }
+
+  if (contextType === ContextType.Ministry) {
+    // Check if user is leader of this ministry
+    return (
+      user?.ministry_id === contextId &&
+      user?.role_level >= RoleLevel.MinistryLeader
+    );
+  }
+
+  if (contextType === ContextType.District) {
+    // Check if user is leader of this district
+    return (
+      user?.district_id === contextId &&
+      user?.role_level >= RoleLevel.MinistryLeader
+    );
+  }
+
+  return false;
+}
+
+/**
+ * Check if user has a specific permission
+ */
+export function hasPermission(user: any, permission: string): boolean {
+  if (!user) return false;
+
+  // Admin has all permissions
+  if (isAdmin(user)) {
+    return true;
+  }
+
+  // In a real implementation, we would check the user's permissions from the database
+  // For now, we'll use a simple mapping based on role level
+  const rolePermissions: Record<number, string[]> = {
+    [RoleLevel.MinistryLeader]: [
+      "manage_cell_groups",
+      "manage_attendance",
+      "manage_events",
+      "view_reports",
+    ],
+    [RoleLevel.CellLeader]: ["manage_attendance"],
+    [RoleLevel.Member]: [],
+  };
+
+  return rolePermissions[user.role_level]?.includes(permission) || false;
 }

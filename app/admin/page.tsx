@@ -1,12 +1,120 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Layout from '@/app/components/layout/Layout';
 import ProtectedRoute from '../components/ProtectedRoute';
+import { getSupabaseClient } from '../lib/supabase';
 
 export default function AdminPage() {
   const [activeTab, setActiveTab] = useState('documents');
+  const [recentArticles, setRecentArticles] = useState<any[]>([]);
+  const [loadingArticles, setLoadingArticles] = useState(false);
+  const [articleError, setArticleError] = useState<string | null>(null);
+
+  // User management state
+  const [users, setUsers] = useState<any[]>([]);
+  const [loadingUsers, setLoadingUsers] = useState(false);
+  const [userError, setUserError] = useState<string | null>(null);
+
+  // Fetch recent articles from Supabase
+  const fetchRecentArticles = async () => {
+    try {
+      setLoadingArticles(true);
+      setArticleError(null);
+      const supabase = getSupabaseClient();
+
+      // Get the 5 most recent articles
+      const { data, error } = await supabase
+        .from('articles')
+        .select('id, title, status, category, published_at')
+        .order('published_at', { ascending: false })
+        .limit(5);
+
+      if (error) throw error;
+
+      setRecentArticles(data || []);
+    } catch (error: any) {
+      console.error('Error fetching recent articles:', error);
+      setArticleError(error.message || 'Failed to load recent articles');
+    } finally {
+      setLoadingArticles(false);
+    }
+  };
+
+  // Handle article deletion
+  const handleDeleteArticle = async (articleId: string) => {
+    if (!confirm('Are you sure you want to delete this article? This action cannot be undone.')) {
+      return;
+    }
+
+    try {
+      const supabase = getSupabaseClient();
+
+      const { error } = await supabase
+        .from('articles')
+        .delete()
+        .eq('id', articleId);
+
+      if (error) throw error;
+
+      // Refresh the articles list
+      fetchRecentArticles();
+
+    } catch (error: any) {
+      console.error('Error deleting article:', error);
+      alert('Failed to delete article: ' + (error.message || 'Unknown error'));
+    }
+  };
+
+  // Load recent articles when the component mounts
+  useEffect(() => {
+    if (activeTab === 'content') {
+      fetchRecentArticles();
+    } else if (activeTab === 'users') {
+      fetchRecentUsers();
+    }
+  }, [activeTab]);
+
+  // Fetch recent users from Supabase
+  const fetchRecentUsers = async () => {
+    try {
+      setLoadingUsers(true);
+      setUserError(null);
+      const supabase = getSupabaseClient();
+
+      // Get the 5 most recent users
+      const { data, error } = await supabase
+        .from('members')
+        .select('id, first_name, last_name, email, role, role_level, status')
+        .order('created_at', { ascending: false })
+        .limit(5);
+
+      if (error) throw error;
+
+      setUsers(data || []);
+    } catch (error: any) {
+      console.error('Error fetching recent users:', error);
+      setUserError(error.message || 'Failed to load recent users');
+    } finally {
+      setLoadingUsers(false);
+    }
+  };
+
+  // Get role name based on role level
+  const getRoleName = (roleLevel: number) => {
+    switch (roleLevel) {
+      case 4:
+        return 'Administrator';
+      case 3:
+        return 'Ministry Leader';
+      case 2:
+        return 'Cell Leader';
+      case 1:
+      default:
+        return 'Member';
+    }
+  };
 
   return (
     <ProtectedRoute adminOnly={true}>
@@ -235,6 +343,19 @@ export default function AdminPage() {
               </Link>
 
               <Link
+                href="/admin/events/calendar"
+                className="p-4 border rounded-lg hover:bg-gray-50 flex flex-col items-center text-center"
+              >
+                <svg className="w-12 h-12 text-primary mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path>
+                </svg>
+                <h3 className="font-medium">Event Calendar</h3>
+                <p className="text-sm text-gray-500 mt-1">
+                  View and manage events in calendar view
+                </p>
+              </Link>
+
+              <Link
                 href="/admin/media"
                 className="p-4 border rounded-lg hover:bg-gray-50 flex flex-col items-center text-center"
               >
@@ -264,48 +385,52 @@ export default function AdminPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
-                  <tr>
-                    <td className="py-3 px-4">Welcome to Our New Website</td>
-                    <td className="py-3 px-4">Announcements</td>
-                    <td className="py-3 px-4">
-                      <span className="px-2 py-1 rounded-full text-xs bg-green-100 text-green-800">
-                        Published
-                      </span>
-                    </td>
-                    <td className="py-3 px-4">Apr 15, 2023</td>
-                    <td className="py-3 px-4">
-                      <Link href="/admin/articles/edit/1" className="text-primary hover:underline mr-2">Edit</Link>
-                      <button className="text-red-600 hover:underline">Delete</button>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td className="py-3 px-4">Upcoming Youth Retreat</td>
-                    <td className="py-3 px-4">Events</td>
-                    <td className="py-3 px-4">
-                      <span className="px-2 py-1 rounded-full text-xs bg-green-100 text-green-800">
-                        Published
-                      </span>
-                    </td>
-                    <td className="py-3 px-4">Apr 12, 2023</td>
-                    <td className="py-3 px-4">
-                      <Link href="/admin/articles/edit/2" className="text-primary hover:underline mr-2">Edit</Link>
-                      <button className="text-red-600 hover:underline">Delete</button>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td className="py-3 px-4">Easter Service Schedule</td>
-                    <td className="py-3 px-4">Announcements</td>
-                    <td className="py-3 px-4">
-                      <span className="px-2 py-1 rounded-full text-xs bg-yellow-100 text-yellow-800">
-                        Draft
-                      </span>
-                    </td>
-                    <td className="py-3 px-4">-</td>
-                    <td className="py-3 px-4">
-                      <Link href="/admin/articles/edit/3" className="text-primary hover:underline mr-2">Edit</Link>
-                      <button className="text-red-600 hover:underline">Delete</button>
-                    </td>
-                  </tr>
+                  {loadingArticles ? (
+                    <tr>
+                      <td colSpan={5} className="py-4 text-center">
+                        <div className="inline-block animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-primary"></div>
+                        <p className="mt-2 text-sm text-gray-500">Loading articles...</p>
+                      </td>
+                    </tr>
+                  ) : articleError ? (
+                    <tr>
+                      <td colSpan={5} className="py-4 text-center text-red-500">
+                        {articleError}
+                      </td>
+                    </tr>
+                  ) : recentArticles.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} className="py-4 text-center text-gray-500">
+                        No articles found. <Link href="/admin/articles/add" className="text-primary hover:underline">Create your first article</Link>
+                      </td>
+                    </tr>
+                  ) : (
+                    recentArticles.map(article => (
+                      <tr key={article.id}>
+                        <td className="py-3 px-4">{article.title}</td>
+                        <td className="py-3 px-4">{article.category}</td>
+                        <td className="py-3 px-4">
+                          <span className={`px-2 py-1 rounded-full text-xs ${article.status === 'published' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
+                            {article.status === 'published' ? 'Published' : 'Draft'}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4">
+                          {article.status === 'published' && article.published_at
+                            ? new Date(article.published_at).toLocaleDateString()
+                            : '-'}
+                        </td>
+                        <td className="py-3 px-4">
+                          <Link href={`/admin/articles/edit/${article.id}`} className="text-primary hover:underline mr-2">Edit</Link>
+                          <button
+                            onClick={() => handleDeleteArticle(article.id)}
+                            className="text-red-600 hover:underline"
+                          >
+                            Delete
+                          </button>
+                        </td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
             </div>
@@ -330,14 +455,11 @@ export default function AdminPage() {
             <Link href="/admin/users" className="btn-secondary">
               Manage Users
             </Link>
+            <Link href="/admin/users/permissions" className="btn-secondary">
+              User Permissions
+            </Link>
             <Link href="/admin/roles" className="btn-secondary">
               Manage Roles
-            </Link>
-            <Link href="/admin/sync-users" className="btn-secondary">
-              Sync Auth Users
-            </Link>
-            <Link href="/admin/fix-role" className="btn-primary">
-              Fix Admin Role
             </Link>
           </div>
 
@@ -353,50 +475,50 @@ export default function AdminPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
-                <tr>
-                  <td className="py-3 px-4">John Doe</td>
-                  <td className="py-3 px-4">john.doe@example.com</td>
-                  <td className="py-3 px-4">Admin</td>
-                  <td className="py-3 px-4">
-                    <span className="px-2 py-1 rounded-full text-xs bg-green-100 text-green-800">
-                      Active
-                    </span>
-                  </td>
-                  <td className="py-3 px-4">
-                    <button className="text-primary hover:underline mr-2">Edit</button>
-                    <button className="text-red-600 hover:underline">Deactivate</button>
-                  </td>
-                </tr>
-                <tr>
-                  <td className="py-3 px-4">Jane Smith</td>
-                  <td className="py-3 px-4">jane.smith@example.com</td>
-                  <td className="py-3 px-4">Pastor</td>
-                  <td className="py-3 px-4">
-                    <span className="px-2 py-1 rounded-full text-xs bg-green-100 text-green-800">
-                      Active
-                    </span>
-                  </td>
-                  <td className="py-3 px-4">
-                    <button className="text-primary hover:underline mr-2">Edit</button>
-                    <button className="text-red-600 hover:underline">Deactivate</button>
-                  </td>
-                </tr>
-                <tr>
-                  <td className="py-3 px-4">Michael Johnson</td>
-                  <td className="py-3 px-4">michael.j@example.com</td>
-                  <td className="py-3 px-4">Staff</td>
-                  <td className="py-3 px-4">
-                    <span className="px-2 py-1 rounded-full text-xs bg-green-100 text-green-800">
-                      Active
-                    </span>
-                  </td>
-                  <td className="py-3 px-4">
-                    <button className="text-primary hover:underline mr-2">Edit</button>
-                    <button className="text-red-600 hover:underline">Deactivate</button>
-                  </td>
-                </tr>
+                {loadingUsers ? (
+                  <tr>
+                    <td colSpan={5} className="py-4 text-center">
+                      <div className="inline-block animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-primary"></div>
+                      <p className="mt-2 text-sm text-gray-500">Loading users...</p>
+                    </td>
+                  </tr>
+                ) : userError ? (
+                  <tr>
+                    <td colSpan={5} className="py-4 text-center text-red-500">
+                      {userError}
+                    </td>
+                  </tr>
+                ) : users.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} className="py-4 text-center text-gray-500">
+                      No users found.
+                    </td>
+                  </tr>
+                ) : (
+                  users.map(user => (
+                    <tr key={user.id}>
+                      <td className="py-3 px-4">{user.first_name} {user.last_name}</td>
+                      <td className="py-3 px-4">{user.email}</td>
+                      <td className="py-3 px-4">{getRoleName(user.role_level)}</td>
+                      <td className="py-3 px-4">
+                        <span className={`px-2 py-1 rounded-full text-xs ${user.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                          {user.status === 'active' ? 'Active' : 'Inactive'}
+                        </span>
+                      </td>
+                      <td className="py-3 px-4">
+                        <Link href={`/admin/users/edit/${user.id}`} className="text-primary hover:underline mr-2">Edit</Link>
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
+          </div>
+
+          <div className="mt-4 text-center">
+            <Link href="/admin/users" className="text-primary hover:underline">
+              View All Users →
+            </Link>
           </div>
         </div>
       )}

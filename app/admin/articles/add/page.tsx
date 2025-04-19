@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { getSupabaseClient } from '../../../lib/supabase';
 import Header from '../../../components/Header';
+import RichTextEditor from '../../../components/RichTextEditor';
 
 export default function AddArticle() {
   const router = useRouter();
@@ -29,20 +30,20 @@ export default function AddArticle() {
   const fetchCategories = async () => {
     try {
       const supabase = getSupabaseClient();
-      
+
       const { data, error } = await supabase
         .from('articles')
         .select('category')
         .order('category', { ascending: true });
-        
+
       if (error) throw error;
-      
+
       // Extract unique categories
       const uniqueCategories = [...new Set(data.map(item => item.category))];
       setCategories(uniqueCategories);
-      
+
     } catch (error) {
-      
+
     }
   };
 
@@ -67,26 +68,26 @@ export default function AddArticle() {
     setLoading(true);
     setError(null);
     setSuccess(false);
-    
+
     try {
       const supabase = getSupabaseClient();
-      
+
       // Get current user
       const { data: { user } } = await supabase.auth.getUser();
-      
+
       if (!user) {
         throw new Error('You must be logged in to create an article');
       }
-      
+
       // Determine category
-      const category = formData.category === 'new' && formData.newCategory 
-        ? formData.newCategory.trim() 
+      const category = formData.category === 'new' && formData.newCategory
+        ? formData.newCategory.trim()
         : formData.category;
-        
+
       if (!category) {
         throw new Error('Please select or enter a category');
       }
-      
+
       // If setting to featured, first unfeature all other articles
       if (formData.featured) {
         await supabase
@@ -94,7 +95,7 @@ export default function AddArticle() {
           .update({ featured: false })
           .eq('featured', true);
       }
-      
+
       // Create article
       const { data, error } = await supabase
         .from('articles')
@@ -111,11 +112,11 @@ export default function AddArticle() {
         })
         .select()
         .single();
-        
+
       if (error) throw error;
-      
+
       setSuccess(true);
-      
+
       // Reset form
       setFormData({
         title: '',
@@ -127,14 +128,14 @@ export default function AddArticle() {
         status: 'draft',
         featured: false
       });
-      
+
       // Redirect to articles list after a short delay
       setTimeout(() => {
         router.push('/admin/articles');
       }, 2000);
-      
+
     } catch (error: any) {
-      
+
       setError(error.message || 'Failed to create article');
     } finally {
       setLoading(false);
@@ -148,7 +149,7 @@ export default function AddArticle() {
         backTo="/admin/articles"
         backLabel="Back to Articles"
       />
-      
+
       <div className="bg-white shadow rounded-lg p-6">
         {error && (
           <div className="bg-red-50 border-l-4 border-red-400 p-4 mb-6">
@@ -166,7 +167,7 @@ export default function AddArticle() {
             </div>
           </div>
         )}
-        
+
         {success && (
           <div className="bg-green-50 border-l-4 border-green-400 p-4 mb-6">
             <div className="flex">
@@ -183,7 +184,7 @@ export default function AddArticle() {
             </div>
           </div>
         )}
-        
+
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Title */}
           <div>
@@ -201,7 +202,7 @@ export default function AddArticle() {
               placeholder="Enter article title"
             />
           </div>
-          
+
           {/* Summary */}
           <div>
             <label htmlFor="summary" className="block text-sm font-medium text-gray-700 mb-1">
@@ -220,27 +221,23 @@ export default function AddArticle() {
               A short summary that will be displayed in article listings
             </p>
           </div>
-          
+
           {/* Content */}
           <div>
             <label htmlFor="content" className="block text-sm font-medium text-gray-700 mb-1">
               Content <span className="text-red-500">*</span>
             </label>
-            <textarea
-              id="content"
-              name="content"
+            <RichTextEditor
               value={formData.content}
-              onChange={handleInputChange}
-              required
-              rows={10}
-              className="input-field"
+              onChange={(value) => setFormData(prev => ({ ...prev, content: value }))}
               placeholder="Write your article content here..."
-            ></textarea>
+              minHeight="300px"
+            />
             <p className="mt-1 text-xs text-gray-500">
-              Use line breaks to separate paragraphs
+              Use the formatting toolbar to style your content
             </p>
           </div>
-          
+
           {/* Category */}
           <div>
             <label htmlFor="category" className="block text-sm font-medium text-gray-700 mb-1">
@@ -263,7 +260,7 @@ export default function AddArticle() {
               <option value="new">+ Add new category</option>
             </select>
           </div>
-          
+
           {/* New Category (conditional) */}
           {formData.category === 'new' && (
             <div>
@@ -282,7 +279,7 @@ export default function AddArticle() {
               />
             </div>
           )}
-          
+
           {/* Image URL */}
           <div>
             <label htmlFor="image_url" className="block text-sm font-medium text-gray-700 mb-1">
@@ -301,7 +298,7 @@ export default function AddArticle() {
               URL to an image for this article (optional)
             </p>
           </div>
-          
+
           {/* Status and Featured */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
@@ -322,7 +319,7 @@ export default function AddArticle() {
                 Draft articles are not visible to members
               </p>
             </div>
-            
+
             <div className="flex items-center h-full pt-6">
               <input
                 type="checkbox"
@@ -340,7 +337,7 @@ export default function AddArticle() {
               </p>
             </div>
           </div>
-          
+
           {/* Submit Button */}
           <div className="flex justify-end">
             <button

@@ -21,17 +21,17 @@ export default function AdminUsers() {
     try {
       setLoading(true);
       const supabase = getSupabaseClient();
-      
+
       const { data, error } = await supabase
         .from('members')
         .select('id, first_name, last_name, email, role, status')
         .order('first_name', { ascending: true });
-        
+
       if (error) throw error;
-      
+
       setUsers(data || []);
     } catch (error) {
-      
+
     } finally {
       setLoading(false);
     }
@@ -45,7 +45,7 @@ export default function AdminUsers() {
 
   const filteredUsers = users.filter(user => {
     if (!searchQuery) return true;
-    
+
     const query = searchQuery.toLowerCase();
     return (
       user.first_name?.toLowerCase().includes(query) ||
@@ -58,16 +58,16 @@ export default function AdminUsers() {
 
   const handleSetAdmin = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!adminEmail) {
       setSetAdminError('Email is required');
       return;
     }
-    
+
     setSetAdminLoading(true);
     setSetAdminError(null);
     setSetAdminSuccess(null);
-    
+
     try {
       const response = await fetch('/api/admin/set-admin-role', {
         method: 'POST',
@@ -76,20 +76,20 @@ export default function AdminUsers() {
         },
         body: JSON.stringify({ email: adminEmail }),
       });
-      
+
       const data = await response.json();
-      
+
       if (!response.ok) {
         throw new Error(data.error || 'Failed to set admin role');
       }
-      
+
       setSetAdminSuccess(data.message || 'Successfully set admin role');
       setAdminEmail('');
-      
+
       // Refresh the user list
       fetchUsers();
     } catch (error: any) {
-      
+
       setSetAdminError(error.message || 'Failed to set admin role');
     } finally {
       setSetAdminLoading(false);
@@ -103,24 +103,34 @@ export default function AdminUsers() {
         backTo="/admin"
         backLabel="Admin Dashboard"
       />
-      
+
       <div className="space-y-6">
+        {/* Action Buttons */}
+        <div className="flex flex-wrap gap-3 mb-4">
+          <a href="/admin/roles" className="px-4 py-2 bg-white border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 shadow-sm">
+            Manage Roles
+          </a>
+          <a href="/admin/users/permissions" className="px-4 py-2 bg-white border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 shadow-sm">
+            User Permissions
+          </a>
+        </div>
+
         {/* Set Admin Form */}
         <div className="bg-white shadow rounded-lg p-6">
           <h2 className="text-lg font-medium text-gray-900 mb-4">Set Admin Role</h2>
-          
+
           {setAdminError && (
             <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
               {setAdminError}
             </div>
           )}
-          
+
           {setAdminSuccess && (
             <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-4">
               {setAdminSuccess}
             </div>
           )}
-          
+
           <form onSubmit={handleSetAdmin} className="flex items-end space-x-4">
             <div className="flex-grow">
               <label htmlFor="adminEmail" className="block text-sm font-medium text-gray-700 mb-1">
@@ -148,7 +158,7 @@ export default function AdminUsers() {
             This will grant admin privileges to the user with the specified email address.
           </p>
         </div>
-        
+
         {/* User List */}
         <div className="bg-white shadow rounded-lg overflow-hidden">
           <div className="p-6 border-b border-gray-200">
@@ -171,7 +181,7 @@ export default function AdminUsers() {
               </form>
             </div>
           </div>
-          
+
           {loading ? (
             <div className="flex justify-center items-center h-64">
               <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
@@ -209,8 +219,8 @@ export default function AdminUsers() {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                            user.role === 'admin' 
-                              ? 'bg-purple-100 text-purple-800' 
+                            user.role === 'admin'
+                              ? 'bg-purple-100 text-purple-800'
                               : 'bg-blue-100 text-blue-800'
                           }`}>
                             {user.role || 'member'}
@@ -218,8 +228,8 @@ export default function AdminUsers() {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                            user.status === 'active' 
-                              ? 'bg-green-100 text-green-800' 
+                            user.status === 'active'
+                              ? 'bg-green-100 text-green-800'
                               : 'bg-gray-100 text-gray-800'
                           }`}>
                             {user.status || 'inactive'}
