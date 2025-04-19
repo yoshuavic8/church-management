@@ -5,13 +5,25 @@ import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { getSupabaseClient } from '../../lib/supabase';
 import Header from '../../components/Header';
+import {
+  getContextName,
+  getMeetingTypeLabel,
+  getStatusBadgeClass,
+  formatDate,
+  calculateAttendanceStats
+} from '../utils/attendanceUtils';
 
 type Meeting = {
   id: string;
-  cell_group_id: string;
-  cell_group: {
+  cell_group_id?: string;
+  cell_group?: {
     name: string;
-  };
+  } | null;
+  ministry_id?: string;
+  ministry?: {
+    name: string;
+  } | null;
+  event_category: string;
   meeting_date: string;
   meeting_type: string;
   topic: string;
@@ -69,19 +81,23 @@ export default function AttendanceDetailPage() {
           .from('attendance_meetings')
           .select(`
             *,
-            cell_group:cell_group_id (name)
+            cell_group:cell_group_id (name),
+            ministry:ministry_id (name)
           `)
           .eq('id', id)
           .single();
 
         if (meetingError) throw meetingError;
 
-        // Fix the cell_group property if it's an array
+        // Process the meeting data to handle nested objects
         const processedMeeting = {
           ...meetingData,
           cell_group: Array.isArray(meetingData.cell_group)
             ? meetingData.cell_group[0]
-            : meetingData.cell_group
+            : meetingData.cell_group,
+          ministry: Array.isArray(meetingData.ministry)
+            ? meetingData.ministry[0]
+            : meetingData.ministry
         };
 
         setMeeting(processedMeeting);
@@ -119,26 +135,16 @@ export default function AttendanceDetailPage() {
         if (visitorsError) throw visitorsError;
         setVisitors(visitorsData || []);
 
-        // Calculate stats
-        if (participantsData) {
-          const presentCount = participantsData.filter(p => p.status === 'present').length;
-          const absentCount = participantsData.filter(p => p.status === 'absent').length;
-          const lateCount = participantsData.filter(p => p.status === 'late').length;
-          const excusedCount = participantsData.filter(p => p.status === 'excused').length;
-
-          setStats({
-            total: participantsData.length,
-            present: presentCount,
-            absent: absentCount,
-            late: lateCount,
-            excused: excusedCount,
-            visitors: visitorsData ? visitorsData.length : 0,
-          });
-        }
+        // Calculate stats using utility function
+        const calculatedStats = calculateAttendanceStats(
+          processedParticipants || [],
+          visitorsData || []
+        );
+        setStats(calculatedStats);
 
         setLoading(false);
       } catch (error: any) {
-        
+
         setError(error.message || 'Failed to load attendance data');
         setLoading(false);
       }
@@ -147,45 +153,7 @@ export default function AttendanceDetailPage() {
     fetchAttendanceData();
   }, [id]);
 
-  const formatDate = (dateString: string) => {
-    if (!dateString) return 'N/A';
-    return new Date(dateString).toLocaleDateString('en-US', {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-    });
-  };
-
-  const getMeetingTypeLabel = (type: string) => {
-    switch (type) {
-      case 'regular':
-        return 'Regular Meeting';
-      case 'special':
-        return 'Special Meeting';
-      case 'outreach':
-        return 'Outreach';
-      case 'prayer':
-        return 'Prayer Meeting';
-      default:
-        return type.charAt(0).toUpperCase() + type.slice(1);
-    }
-  };
-
-  const getStatusBadgeClass = (status: string) => {
-    switch (status) {
-      case 'present':
-        return 'bg-green-100 text-green-800';
-      case 'absent':
-        return 'bg-red-100 text-red-800';
-      case 'late':
-        return 'bg-yellow-100 text-yellow-800';
-      case 'excused':
-        return 'bg-blue-100 text-blue-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
-    }
-  };
+  // Using utility functions from attendanceUtils.ts
 
   const handleConvertToMember = async (visitorId: string) => {
     router.push(`/members/add?from_visitor=${visitorId}`);
@@ -243,7 +211,9 @@ export default function AttendanceDetailPage() {
       <div className="card mb-6">
         <div className="flex justify-between items-start">
           <div>
-            <h2 className="text-xl font-semibold">{meeting.cell_group.name}</h2>
+            <h2 className="text-xl font-semibold">
+              {getContextName(meeting)}
+            </h2>
             <p className="text-gray-600">{formatDate(meeting.meeting_date)}</p>
           </div>
           <span className="px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
@@ -294,38 +264,67 @@ export default function AttendanceDetailPage() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
-        <div className="card bg-gray-50 p-4 text-center">
-          <p className="text-sm text-gray-500">Total Members</p>
-          <p className="text-2xl font-bold">{stats.total}</p>
+        <div className="card bg-white p-4 text-center shadow-sm hover:shadow transition-shadow duration-200">
+          <p className="text-sm font-medium text-gray-500">Total Members</p>
+          <p className="text-2xl font-bold mt-1">{stats.total}</p>
         </div>
 
-        <div className="card bg-green-50 p-4 text-center">
-          <p className="text-sm text-green-600">Present</p>
-          <p className="text-2xl font-bold text-green-700">{stats.present}</p>
-          <p className="text-xs text-green-600">
-            {stats.total > 0 ? Math.round((stats.present / stats.total) * 100) : 0}%
-          </p>
+        <div className="card bg-white p-4 text-center shadow-sm hover:shadow transition-shadow duration-200">
+          <p className="text-sm font-medium text-green-600">Present</p>
+          <p className="text-2xl font-bold text-green-700 mt-1">{stats.present}</p>
+          <div className="mt-2">
+            <div className="w-full bg-gray-200 rounded-full h-1.5">
+              <div
+                className="bg-green-600 h-1.5 rounded-full"
+                style={{ width: `${stats.total > 0 ? (stats.present / stats.total) * 100 : 0}%` }}
+              ></div>
+            </div>
+            <p className="text-xs text-gray-500 mt-1">
+              {stats.total > 0 ? Math.round((stats.present / stats.total) * 100) : 0}%
+            </p>
+          </div>
         </div>
 
-        <div className="card bg-red-50 p-4 text-center">
-          <p className="text-sm text-red-600">Absent</p>
-          <p className="text-2xl font-bold text-red-700">{stats.absent}</p>
-          <p className="text-xs text-red-600">
-            {stats.total > 0 ? Math.round((stats.absent / stats.total) * 100) : 0}%
-          </p>
+        <div className="card bg-white p-4 text-center shadow-sm hover:shadow transition-shadow duration-200">
+          <p className="text-sm font-medium text-red-600">Absent</p>
+          <p className="text-2xl font-bold text-red-700 mt-1">{stats.absent}</p>
+          <div className="mt-2">
+            <div className="w-full bg-gray-200 rounded-full h-1.5">
+              <div
+                className="bg-red-600 h-1.5 rounded-full"
+                style={{ width: `${stats.total > 0 ? (stats.absent / stats.total) * 100 : 0}%` }}
+              ></div>
+            </div>
+            <p className="text-xs text-gray-500 mt-1">
+              {stats.total > 0 ? Math.round((stats.absent / stats.total) * 100) : 0}%
+            </p>
+          </div>
         </div>
 
-        <div className="card bg-yellow-50 p-4 text-center">
-          <p className="text-sm text-yellow-600">Late</p>
-          <p className="text-2xl font-bold text-yellow-700">{stats.late}</p>
-          <p className="text-xs text-yellow-600">
-            {stats.total > 0 ? Math.round((stats.late / stats.total) * 100) : 0}%
-          </p>
+        <div className="card bg-white p-4 text-center shadow-sm hover:shadow transition-shadow duration-200">
+          <p className="text-sm font-medium text-yellow-600">Late</p>
+          <p className="text-2xl font-bold text-yellow-700 mt-1">{stats.late}</p>
+          <div className="mt-2">
+            <div className="w-full bg-gray-200 rounded-full h-1.5">
+              <div
+                className="bg-yellow-500 h-1.5 rounded-full"
+                style={{ width: `${stats.total > 0 ? (stats.late / stats.total) * 100 : 0}%` }}
+              ></div>
+            </div>
+            <p className="text-xs text-gray-500 mt-1">
+              {stats.total > 0 ? Math.round((stats.late / stats.total) * 100) : 0}%
+            </p>
+          </div>
         </div>
 
-        <div className="card bg-blue-50 p-4 text-center">
-          <p className="text-sm text-blue-600">Visitors</p>
-          <p className="text-2xl font-bold text-blue-700">{stats.visitors}</p>
+        <div className="card bg-white p-4 text-center shadow-sm hover:shadow transition-shadow duration-200">
+          <p className="text-sm font-medium text-blue-600">Visitors</p>
+          <p className="text-2xl font-bold text-blue-700 mt-1">{stats.visitors}</p>
+          <div className="mt-2 flex justify-center">
+            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+              New
+            </span>
+          </div>
         </div>
       </div>
 

@@ -28,6 +28,16 @@ function DashboardContent() {
     totalClasses: 0,
     upcomingServices: 0,
   });
+  // Define type for upcoming events
+  type UpcomingEvent = {
+    id: string;
+    meeting_date: string;
+    topic: string | null;
+    location: string | null;
+    event_category: string;
+  };
+
+  const [upcomingEvents, setUpcomingEvents] = useState<UpcomingEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -88,7 +98,6 @@ function DashboardContent() {
           if (error) throw error;
           ministriesCount = count || 0;
         } catch (err) {
-          console.error('Error fetching ministries count:', err);
           // Continue with other stats even if this fails
         }
 
@@ -96,14 +105,53 @@ function DashboardContent() {
 
 
 
-        // For now, we'll keep using placeholder data for classes and services
+        // Get classes count
+        let classesCount = 0;
+        try {
+          const { count, error } = await supabase
+            .from('classes')
+            .select('*', { count: 'exact', head: true });
+
+          if (error) throw error;
+          classesCount = count || 0;
+        } catch (err) {
+          // Continue with other stats even if this fails
+        }
+
+        // Get upcoming services count and data
+        let upcomingServicesCount = 0;
+        try {
+          // First get the count
+          const { count, error } = await supabase
+            .from('attendance_meetings')
+            .select('*', { count: 'exact', head: true })
+            .eq('event_category', 'service')
+            .gte('meeting_date', new Date().toISOString().split('T')[0]);
+
+          if (error) throw error;
+          upcomingServicesCount = count || 0;
+
+          // Then get the upcoming events data
+          const { data: eventsData, error: eventsError } = await supabase
+            .from('attendance_meetings')
+            .select('id, meeting_date, topic, location, event_category')
+            .gte('meeting_date', new Date().toISOString().split('T')[0])
+            .order('meeting_date', { ascending: true })
+            .limit(3);
+
+          if (eventsError) throw eventsError;
+          setUpcomingEvents(eventsData || []);
+        } catch (err) {
+          // Continue with other stats even if this fails
+        }
+
         setStats({
           totalMembers: membersCount || 0,
           totalCellGroups: cellGroupsCount || 0,
           totalDistricts: districtsCount || 0,
           totalMinistries: ministriesCount || 0,
-          totalClasses: 5, // Placeholder
-          upcomingServices: 8, // Placeholder
+          totalClasses: classesCount,
+          upcomingServices: upcomingServicesCount,
         });
 
 
@@ -251,38 +299,37 @@ function DashboardContent() {
         <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-theme-sm dark:border-gray-700 dark:bg-gray-800">
           <h2 className="text-xl font-semibold mb-4 text-gray-800 dark:text-white/90">Upcoming Events</h2>
           <div className="space-y-4">
-            <div className="flex items-start">
-              <div className="bg-brand-50 text-brand-500 rounded-lg p-2 mr-4 text-center min-w-[60px] dark:bg-brand-500 dark:bg-opacity-10 dark:text-brand-400">
-                <div className="text-sm font-bold">APR</div>
-                <div className="text-xl font-bold">15</div>
-              </div>
-              <div>
-                <h3 className="font-medium text-gray-800 dark:text-white/90">Bible Study Class</h3>
-                <p className="text-sm text-gray-500 dark:text-gray-400">7:00 PM - Main Hall</p>
-              </div>
-            </div>
+            {upcomingEvents.length > 0 ? (
+              upcomingEvents.map(event => {
+                const eventDate = new Date(event.meeting_date);
+                const month = eventDate.toLocaleString('en-US', { month: 'short' }).toUpperCase();
+                const day = eventDate.getDate();
 
-            <div className="flex items-start">
-              <div className="bg-brand-50 text-brand-500 rounded-lg p-2 mr-4 text-center min-w-[60px] dark:bg-brand-500 dark:bg-opacity-10 dark:text-brand-400">
-                <div className="text-sm font-bold">APR</div>
-                <div className="text-xl font-bold">18</div>
+                return (
+                  <div key={event.id} className="flex items-start">
+                    <div className="bg-brand-50 text-brand-500 rounded-lg p-2 mr-4 text-center min-w-[60px] dark:bg-brand-500 dark:bg-opacity-10 dark:text-brand-400">
+                      <div className="text-sm font-bold">{month}</div>
+                      <div className="text-xl font-bold">{day}</div>
+                    </div>
+                    <div>
+                      <h3 className="font-medium text-gray-800 dark:text-white/90">
+                        {event.topic || `${event.event_category.replace('_', ' ').replace(/\b\w/g, (l: string) => l.toUpperCase())} Meeting`}
+                      </h3>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">
+                        {event.location || 'Location not specified'}
+                      </p>
+                    </div>
+                  </div>
+                );
+              })
+            ) : (
+              <div className="text-center py-6">
+                <p className="text-gray-500 dark:text-gray-400">No upcoming events found</p>
+                <Link href="/attendance/record" className="inline-block mt-2 text-brand-500 hover:text-brand-600 dark:text-brand-400">
+                  Schedule a new event
+                </Link>
               </div>
-              <div>
-                <h3 className="font-medium text-gray-800 dark:text-white/90">Leadership Meeting</h3>
-                <p className="text-sm text-gray-500 dark:text-gray-400">6:30 PM - Conference Room</p>
-              </div>
-            </div>
-
-            <div className="flex items-start">
-              <div className="bg-brand-50 text-brand-500 rounded-lg p-2 mr-4 text-center min-w-[60px] dark:bg-brand-500 dark:bg-opacity-10 dark:text-brand-400">
-                <div className="text-sm font-bold">APR</div>
-                <div className="text-xl font-bold">20</div>
-              </div>
-              <div>
-                <h3 className="font-medium text-gray-800 dark:text-white/90">Sunday Service</h3>
-                <p className="text-sm text-gray-500 dark:text-gray-400">10:00 AM - Main Sanctuary</p>
-              </div>
-            </div>
+            )}
           </div>
         </div>
       </div>

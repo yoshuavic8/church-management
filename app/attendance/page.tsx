@@ -10,6 +10,15 @@ import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
 import Badge from '../components/ui/Badge';
 import { EventCategory } from '../types/ministry';
+import {
+  getContextName,
+  getMeetingTypeLabel,
+  formatShortDate,
+  exportToCSV,
+  getDateRange,
+  getCategoryContextLabel
+} from './utils/attendanceUtils';
+import AttendanceTrendChart from './components/AttendanceTrendChart';
 
 type AttendanceRecord = {
   id: string;
@@ -434,8 +443,12 @@ function AttendanceContent() {
   const applyTimeFilter = (records: AttendanceRecord[], filter: string): AttendanceRecord[] => {
     if (filter === 'all') return records;
 
-    // Use the same logic as isWithinTimeFilter to ensure consistency
-    return records.filter(record => isWithinTimeFilter(record.meeting_date, filter));
+    const { startDate, endDate } = getDateRange(filter as 'week' | 'month' | 'quarter' | 'year' | 'all');
+
+    return records.filter(record => {
+      const recordDate = new Date(record.meeting_date);
+      return recordDate >= startDate && recordDate <= endDate;
+    });
   };
   // Apply all filters to records
   const filteredRecords = records.filter(record => {
@@ -473,82 +486,17 @@ function AttendanceContent() {
   function isWithinTimeFilter(dateString: string, filter: string): boolean {
     if (filter === 'all') return true;
 
+    const { startDate, endDate } = getDateRange(filter as 'week' | 'month' | 'quarter' | 'year' | 'all');
     const recordDate = new Date(dateString);
-    const now = new Date();
-    let startDate: Date;
-    let endDate: Date = new Date(now);
 
-    // Check if the record date is in the future
-    if (recordDate > now) {
-
-      return false; // Don't show future dates in time filters
-    }
-
-    switch (filter) {
-      case 'week':
-        // Last 7 days from today
-        startDate = new Date(now);
-        startDate.setDate(now.getDate() - 7);
-        break;
-
-      case 'month':
-        // Previous month (1st day to last day)
-        startDate = new Date(now.getFullYear(), now.getMonth() - 1, 1); // 1st day of previous month
-        endDate = new Date(now.getFullYear(), now.getMonth(), 0); // Last day of previous month
-        break;
-
-      case 'year':
-        // Last 365 days
-        startDate = new Date(now);
-        startDate.setFullYear(now.getFullYear() - 1);
-        break;
-
-      case 'quarter':
-        // Last 3 months
-        startDate = new Date(now);
-        startDate.setMonth(now.getMonth() - 3);
-        break;
-
-      default:
-        return true;
-    }
-
-    // Check if the record date is within the date range
     return recordDate >= startDate && recordDate <= endDate;
   }
 
-  const getMeetingTypeLabel = (type: string) => {
-    switch (type) {
-      case 'regular':
-        return 'Regular Meeting';
-      case 'special':
-        return 'Special Meeting';
-      case 'outreach':
-        return 'Outreach';
-      case 'prayer':
-        return 'Prayer Meeting';
-      default:
-        return type.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase());
-    }
-  };
+  // Using utility function from attendanceUtils.ts
 
   const getCategoryLabel = (category: EventCategory | 'all') => {
-    switch (category) {
-      case 'all':
-        return 'All Categories';
-      case 'cell_group':
-        return 'Cell Group';
-      case 'ministry':
-        return 'Ministry';
-      case 'prayer':
-        return 'Prayer Meeting';
-      case 'service':
-        return 'Church Service';
-      case 'other':
-        return 'Other Event';
-      default:
-        return category.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase());
-    }
+    if (category === 'all') return 'All Categories';
+    return getCategoryContextLabel(category as EventCategory);
   };
 
   // Helper to check if any filter is active
@@ -946,6 +894,14 @@ function AttendanceContent() {
         )}
       </Card>
 
+      {/* Attendance Trend Chart */}
+      <div className="mb-6">
+        <AttendanceTrendChart
+          timeRange={timeFilter as 'week' | 'month' | 'quarter' | 'year' | 'all'}
+          eventCategory={categoryFilter !== 'all' ? categoryFilter : undefined}
+        />
+      </div>
+
       {/* Records Summary */}
       <div className="mb-4">
         <p className="text-sm text-gray-600">
@@ -957,6 +913,17 @@ function AttendanceContent() {
       <Card>
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-xl font-semibold text-gray-800 dark:text-white/90">Attendance Records</h2>
+
+          <button
+            onClick={() => exportToCSV(filteredRecords, 'attendance_records')}
+            className="btn-secondary flex items-center"
+            disabled={filteredRecords.length === 0}
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            Export to CSV
+          </button>
         </div>
 
         {loading ? (
@@ -982,15 +949,29 @@ function AttendanceContent() {
                 {currentRecords.map((record) => (
                   <tr key={record.id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
                     <td className="py-3 px-4">
-                      {new Date(record.meeting_date).toLocaleDateString()}
+                      {formatShortDate(record.meeting_date)}
                     </td>
                     <td className="py-3 px-4">
                       <div className="font-medium text-gray-700 dark:text-gray-300">{record.context_name}</div>
                       <div className="text-xs text-gray-500 dark:text-gray-400">{getCategoryLabel(record.event_category)}</div>
                     </td>
-                    <td className="py-3 px-4">{getMeetingTypeLabel(record.meeting_type)}</td>
-                    <td className="py-3 px-4 text-right font-medium text-success-600 dark:text-success-400">{record.present_count}</td>
-                    <td className="py-3 px-4 text-right text-brand-600 dark:text-brand-400">{record.visitor_count}</td>
+                    <td className="py-3 px-4">
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                        {getMeetingTypeLabel(record.meeting_type)}
+                      </span>
+                    </td>
+                    <td className="py-3 px-4 text-right">
+                      <div className="font-medium text-success-600 dark:text-success-400">{record.present_count}</div>
+                      <div className="text-xs text-gray-500">
+                        {record.total_count > 0 ? Math.round((record.present_count / record.total_count) * 100) : 0}%
+                      </div>
+                    </td>
+                    <td className="py-3 px-4 text-right">
+                      <div className="text-brand-600 dark:text-brand-400">{record.visitor_count}</div>
+                      {record.visitor_count > 0 && (
+                        <div className="text-xs text-gray-500">New</div>
+                      )}
+                    </td>
                     <td className="py-3 px-4 text-right font-medium text-gray-700 dark:text-gray-300">{record.total_count}</td>
                     <td className="py-3 px-4 text-right">
                       {record.offering !== null ? (
@@ -1004,8 +985,12 @@ function AttendanceContent() {
                     <td className="py-3 px-4">
                       <Link
                         href={`/attendance/${record.id}`}
-                        className="text-brand-500 hover:text-brand-600 dark:text-brand-400 dark:hover:text-brand-300"
+                        className="inline-flex items-center px-2.5 py-1.5 border border-transparent text-xs font-medium rounded text-white bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
                       >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                        </svg>
                         View
                       </Link>
                     </td>

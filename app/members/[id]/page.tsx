@@ -160,7 +160,6 @@ export default function MemberDetailPage() {
 
       setResetPasswordSuccess(true);
     } catch (error: any) {
-
       setResetPasswordError(error.message || 'Failed to send password reset email');
     } finally {
       setResetPasswordLoading(false);

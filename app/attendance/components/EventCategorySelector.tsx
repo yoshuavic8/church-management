@@ -1,5 +1,6 @@
 import React from 'react';
 import { EventCategory } from '../../types/ministry';
+import { getCategoryContextLabel } from '../utils/attendanceUtils';
 
 type EventCategorySelectorProps = {
   value: EventCategory;
@@ -13,10 +14,11 @@ export default function EventCategorySelector({
   disabled = false
 }: EventCategorySelectorProps) {
   const categories = [
-    { id: 'cell_group', label: 'Cell Group Meeting' },
-    { id: 'prayer', label: 'Prayer Meeting' },
-    { id: 'ministry', label: 'Ministry Meeting' },
-    { id: 'service', label: 'Church Service' },
+    { id: 'cell_group', label: `${getCategoryContextLabel('cell_group')} Meeting` },
+    { id: 'prayer', label: `${getCategoryContextLabel('prayer')}` },
+    { id: 'ministry', label: `${getCategoryContextLabel('ministry')} Meeting` },
+    { id: 'service', label: `${getCategoryContextLabel('service')}` },
+    { id: 'class', label: `${getCategoryContextLabel('class')}` },
     { id: 'other', label: 'Other Event' }
   ];
 

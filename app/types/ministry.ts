@@ -35,7 +35,13 @@ export type MinistryMember = {
   };
 };
 
-export type EventCategory = 'cell_group' | 'prayer' | 'ministry' | 'service' | 'other';
+export type EventCategory =
+  | "cell_group"
+  | "prayer"
+  | "ministry"
+  | "service"
+  | "class"
+  | "other";
 
 // Extended attendance meeting type
 export type ExtendedAttendanceMeeting = {

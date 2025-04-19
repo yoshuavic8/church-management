@@ -122,6 +122,16 @@ export default function MemberLayout({
               Cell Group
             </Link>
             <Link
+              href="/member/classes"
+              className={`border-b-2 py-4 px-1 text-sm font-medium ${
+                isActive('/member/classes')
+                  ? 'border-primary text-primary'
+                  : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
+              }`}
+            >
+              Classes
+            </Link>
+            <Link
               href="/member/news"
               className={`border-b-2 py-4 px-1 text-sm font-medium ${
                 isActive('/member/news')

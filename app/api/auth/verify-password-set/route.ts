@@ -6,8 +6,6 @@ export async function GET(req: NextRequest) {
     // Use searchParams directly from the request
     const memberId = req.nextUrl.searchParams.get("memberId");
 
-    console.log("Verifying password set for member ID:", memberId);
-
     if (!memberId) {
       return NextResponse.json(
         { error: "Member ID is required" },
@@ -25,8 +23,6 @@ export async function GET(req: NextRequest) {
       .eq("id", memberId)
       .single();
 
-    console.log("Verification query result:", { member, error });
-
     if (error) {
       return NextResponse.json(
         { error: "Failed to verify password set" },
@@ -40,7 +36,6 @@ export async function GET(req: NextRequest) {
       passwordHash: member?.password_hash ? "[REDACTED]" : null,
     });
   } catch (error) {
-    console.error("Error verifying password set:", error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

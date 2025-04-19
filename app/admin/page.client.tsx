@@ -14,17 +14,17 @@ export default function AdminPageClient() {
   const [recentArticles, setRecentArticles] = useState<any[]>([]);
   const [loadingArticles, setLoadingArticles] = useState(false);
   const [articleError, setArticleError] = useState<string | null>(null);
-  
+
   // User management state
   const [users, setUsers] = useState<any[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
   const [userError, setUserError] = useState<string | null>(null);
-  
+
   // Documents state
   const [recentDocuments, setRecentDocuments] = useState<any[]>([]);
   const [loadingDocuments, setLoadingDocuments] = useState(false);
   const [documentError, setDocumentError] = useState<string | null>(null);
-  
+
   // Church settings state
   const [churchSettings, setChurchSettings] = useState({
     name: 'Grace Community Church',
@@ -47,23 +47,23 @@ export default function AdminPageClient() {
       fetchChurchSettings();
     }
   }, [activeTab]);
-  
+
   // Fetch recent articles from Supabase
   const fetchRecentArticles = async () => {
     try {
       setLoadingArticles(true);
       setArticleError(null);
       const supabase = getSupabaseClient();
-      
+
       // Get the 5 most recent articles
       const { data, error } = await supabase
         .from('articles')
         .select('id, title, status, category, published_at')
         .order('published_at', { ascending: false })
         .limit(5);
-        
+
       if (error) throw error;
-      
+
       setRecentArticles(data || []);
     } catch (error: any) {
       console.error('Error fetching recent articles:', error);
@@ -78,42 +78,42 @@ export default function AdminPageClient() {
     if (!confirm('Are you sure you want to delete this article? This action cannot be undone.')) {
       return;
     }
-    
+
     try {
       const supabase = getSupabaseClient();
-      
+
       const { error } = await supabase
         .from('articles')
         .delete()
         .eq('id', articleId);
-        
+
       if (error) throw error;
-      
+
       // Refresh the articles list
       fetchRecentArticles();
-      
+
     } catch (error: any) {
       console.error('Error deleting article:', error);
       alert('Failed to delete article: ' + (error.message || 'Unknown error'));
     }
   };
-  
+
   // Fetch recent users from Supabase
   const fetchRecentUsers = async () => {
     try {
       setLoadingUsers(true);
       setUserError(null);
       const supabase = getSupabaseClient();
-      
+
       // Get the 5 most recent users
       const { data, error } = await supabase
         .from('members')
         .select('id, first_name, last_name, email, role, role_level, status')
         .order('created_at', { ascending: false })
         .limit(5);
-        
+
       if (error) throw error;
-      
+
       setUsers(data || []);
     } catch (error: any) {
       console.error('Error fetching recent users:', error);
@@ -122,7 +122,7 @@ export default function AdminPageClient() {
       setLoadingUsers(false);
     }
   };
-  
+
   // Get role name based on role level
   const getRoleName = (roleLevel: number) => {
     switch (roleLevel) {
@@ -137,14 +137,14 @@ export default function AdminPageClient() {
         return 'Member';
     }
   };
-  
+
   // Fetch recent documents
   const fetchRecentDocuments = async () => {
     try {
       setLoadingDocuments(true);
       setDocumentError(null);
       const supabase = getSupabaseClient();
-      
+
       // Since we don't have a documents table yet, we'll fetch baptized members
       // to simulate recent baptism certificates
       const { data, error } = await supabase
@@ -153,9 +153,9 @@ export default function AdminPageClient() {
         .eq('is_baptized', true)
         .order('baptism_date', { ascending: false })
         .limit(3);
-        
+
       if (error) throw error;
-      
+
       // Transform the data to simulate document records
       const documents = data?.map(member => ({
         id: member.id,
@@ -164,7 +164,7 @@ export default function AdminPageClient() {
         generated_by: 'System Administrator',
         generated_date: member.baptism_date,
       })) || [];
-      
+
       setRecentDocuments(documents);
     } catch (error: any) {
       console.error('Error fetching recent documents:', error);
@@ -173,7 +173,7 @@ export default function AdminPageClient() {
       setLoadingDocuments(false);
     }
   };
-  
+
   // Fetch church settings
   const fetchChurchSettings = async () => {
     try {
@@ -181,7 +181,7 @@ export default function AdminPageClient() {
       // In a real implementation, we would fetch settings from a settings table
       // For now, we'll just simulate a delay
       await new Promise(resolve => setTimeout(resolve, 500));
-      
+
       // Use default settings or fetch from API in the future
       setLoadingSettings(false);
     } catch (error: any) {
@@ -216,7 +216,7 @@ export default function AdminPageClient() {
   if (!user || !isAdmin) {
     return null;
   }
-  
+
   return (
     <Layout>
         <div>
@@ -353,9 +353,15 @@ export default function AdminPageClient() {
               Manage website content, articles, and announcements.
             </p>
 
-            <div className="flex justify-end mb-4">
+            <div className="flex flex-wrap justify-end mb-4 gap-2">
               <Link href="/admin/articles/add" className="btn-primary">
                 Add New Article
+              </Link>
+              <Link href="/admin/classes" className="btn-secondary">
+                Manage Classes
+              </Link>
+              <Link href="/admin/classes/enrollments" className="btn-secondary">
+                Class Enrollments
               </Link>
             </div>
 
@@ -404,13 +410,13 @@ export default function AdminPageClient() {
                           </span>
                         </td>
                         <td className="py-3 px-4">
-                          {article.status === 'published' && article.published_at 
-                            ? new Date(article.published_at).toLocaleDateString() 
+                          {article.status === 'published' && article.published_at
+                            ? new Date(article.published_at).toLocaleDateString()
                             : '-'}
                         </td>
                         <td className="py-3 px-4">
                           <Link href={`/admin/articles/edit/${article.id}`} className="text-primary hover:underline mr-2">Edit</Link>
-                          <button 
+                          <button
                             onClick={() => handleDeleteArticle(article.id)}
                             className="text-red-600 hover:underline"
                           >
@@ -435,7 +441,7 @@ export default function AdminPageClient() {
             Manage user accounts and permissions for the church management system.
           </p>
 
-          <div className="flex justify-end mb-4 space-x-2">
+          <div className="flex flex-wrap justify-end mb-4 gap-2">
             <Link href="/admin/users" className="btn-secondary">
               Manage Users
             </Link>
@@ -498,7 +504,7 @@ export default function AdminPageClient() {
               </tbody>
             </table>
           </div>
-          
+
           <div className="mt-4 text-center">
             <Link href="/admin/users" className="text-primary hover:underline">
               View All Users →

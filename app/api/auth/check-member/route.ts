@@ -4,13 +4,9 @@ import { getSupabaseClient } from "../../../lib/supabase";
 export async function POST(req: NextRequest) {
   try {
     const { email } = await req.json();
-    console.log("Checking member with email:", email);
 
     if (!email) {
-      return NextResponse.json(
-        { error: "Email is required" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Email is required" }, { status: 400 });
     }
 
     // Get Supabase client
@@ -23,13 +19,8 @@ export async function POST(req: NextRequest) {
       .eq("email", email)
       .single();
 
-    console.log("Member check result:", { member, error });
-
     if (error || !member) {
-      return NextResponse.json(
-        { error: "Member not found" },
-        { status: 404 }
-      );
+      return NextResponse.json({ error: "Member not found" }, { status: 404 });
     }
 
     // Check if password is set
@@ -52,7 +43,6 @@ export async function POST(req: NextRequest) {
       hasPassword: true,
     });
   } catch (error) {
-    console.error("Error checking member:", error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

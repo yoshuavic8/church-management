@@ -7,6 +7,7 @@ import Header from '../../components/Header';
 import EventCategorySelector from '../components/EventCategorySelector';
 import ContextSelector from '../components/ContextSelector';
 import { EventCategory } from '../../types/ministry';
+import DynamicAttendanceForm from '../components/forms/DynamicAttendanceForm';
 
 type CellGroup = {
   id: string;
@@ -93,6 +94,8 @@ function RecordAttendanceContent() {
             await fetchCellGroupMembers(contextId);
           } else if (eventCategory === 'ministry') {
             await fetchMinistryMembers(contextId);
+          } else if (eventCategory === 'class') {
+            await fetchClassMembers(contextId);
           } else {
             // For other event types, we might not have predefined members
             setMembers([]);
@@ -103,7 +106,6 @@ function RecordAttendanceContent() {
           setLoading(false);
         }
       } catch (error: any) {
-        
         setError(error.message || 'Failed to load data');
         setLoading(false);
       }
@@ -196,8 +198,80 @@ function RecordAttendanceContent() {
       setParticipants(initialParticipants);
       setLoading(false);
     } catch (error: any) {
-      
       setError(error.message || 'Failed to load cell group members');
+      setLoading(false);
+    }
+  };
+
+  // Fetch class members (enrollments)
+  const fetchClassMembers = async (sessionId: string) => {
+    try {
+      setLoading(true);
+      const supabase = getSupabaseClient();
+
+      // First, get the class and level IDs for this session
+      const { data: sessionData, error: sessionError } = await supabase
+        .from('class_sessions')
+        .select('class_id, level_id')
+        .eq('id', sessionId)
+        .single();
+
+      if (sessionError) {
+        throw sessionError;
+      }
+
+      // Get enrollments based on class_id and level_id
+      let query = supabase
+        .from('class_enrollments')
+        .select(`
+          id,
+          member_id,
+          status,
+          member:member_id(id, first_name, last_name, status)
+        `)
+        .eq('class_id', sessionData.class_id)
+        .eq('status', 'enrolled');
+
+      // If level_id is not null, add it to the query
+      if (sessionData.level_id) {
+        query = query.eq('level_id', sessionData.level_id);
+      }
+
+      const { data: enrollmentsData, error: enrollmentsError } = await query;
+
+      if (enrollmentsError) {
+        throw enrollmentsError;
+      }
+
+      // Format members data
+      const allMemberData = (enrollmentsData || []).map(item => {
+        const memberData = Array.isArray(item.member) ? item.member[0] : item.member;
+        return {
+          id: memberData.id,
+          first_name: memberData.first_name,
+          last_name: memberData.last_name,
+          status: memberData.status
+        } as Member;
+      });
+
+      // Filter out inactive members
+      const activeMembers = allMemberData.filter(member => member.status === 'active');
+
+      setMembers(activeMembers);
+
+      // Initialize participants with all active members
+      const initialParticipants: Participant[] = activeMembers.map(member => ({
+        member_id: member.id,
+        first_name: member.first_name,
+        last_name: member.last_name,
+        status: 'present', // Default to present
+        isRegistered: true,
+      }));
+
+      setParticipants(initialParticipants);
+      setLoading(false);
+    } catch (error: any) {
+      setError(error.message || 'Failed to load class members');
       setLoading(false);
     }
   };
@@ -254,7 +328,6 @@ function RecordAttendanceContent() {
       setParticipants(initialParticipants);
       setLoading(false);
     } catch (error: any) {
-      
       setError(error.message || 'Failed to load ministry members');
       setLoading(false);
     }
@@ -269,8 +342,97 @@ function RecordAttendanceContent() {
   };
 
   // Handle context selection change
-  const handleContextChange = (newContextId: string) => {
+  const handleContextChange = async (newContextId: string) => {
     setContextId(newContextId);
+
+    // If no context is selected, return
+    if (!newContextId) return;
+
+    try {
+      setLoading(true);
+      const supabase = getSupabaseClient();
+
+      // Fetch meeting details based on event category
+      if (eventCategory === 'cell_group') {
+        // For cell groups, we don't have pre-stored meeting details
+        // We could fetch the cell group location if needed
+        const { data: cellGroup, error: cellGroupError } = await supabase
+          .from('cell_groups')
+          .select('location, name')
+          .eq('id', newContextId)
+          .single();
+
+        if (cellGroupError) throw cellGroupError;
+
+        if (cellGroup) {
+          setLocation(cellGroup.location || '');
+          setTopic(`${cellGroup.name} Meeting`);
+        }
+      } else if (eventCategory === 'ministry') {
+        // For ministries, we could fetch ministry details if needed
+        const { data: ministry, error: ministryError } = await supabase
+          .from('ministries')
+          .select('location, name')
+          .eq('id', newContextId)
+          .single();
+
+        if (ministryError) throw ministryError;
+
+        if (ministry) {
+          setLocation(ministry.location || '');
+          setTopic(`${ministry.name} Meeting`);
+        }
+      } else if (eventCategory === 'class') {
+        // For classes, fetch session details
+        const { data: session, error: sessionError } = await supabase
+          .from('class_sessions')
+          .select(`
+            title,
+            description,
+            location,
+            session_date,
+            start_time,
+            end_time,
+            classes:class_id(name)
+          `)
+          .eq('id', newContextId)
+          .single();
+
+        if (sessionError) throw sessionError;
+
+        if (session) {
+          // Update form fields with session data
+          setTopic(session.title || '');
+          setNotes(session.description || '');
+          setLocation(session.location || '');
+
+          // Set meeting date from session_date
+          if (session.session_date) {
+            setMeetingDate(session.session_date);
+          }
+
+          // Set meeting type
+          setMeetingType('class');
+        }
+      }
+
+      // Fetch members for the selected context
+      if (eventCategory === 'cell_group') {
+        await fetchCellGroupMembers(newContextId);
+      } else if (eventCategory === 'ministry') {
+        await fetchMinistryMembers(newContextId);
+      } else if (eventCategory === 'class') {
+        await fetchClassMembers(newContextId);
+      } else {
+        // For other event types, we might not have predefined members
+        setMembers([]);
+        setParticipants([]);
+        setLoading(false);
+      }
+    } catch (error: any) {
+      setError(`Error loading context details: ${error.message || 'Unknown error'}`);
+      setLoading(false);
+    }
   };
 
   // Handle participant status change
@@ -313,6 +475,7 @@ function RecordAttendanceContent() {
 
   // Save attendance record
   const handleSaveAttendance = async () => {
+    // Validate required fields
     if (!contextId) {
       setError(`Please select a ${getCategoryContextLabel(eventCategory)}`);
       return;
@@ -323,53 +486,49 @@ function RecordAttendanceContent() {
       return;
     }
 
+    // Validate that at least one participant has a status set
+    if (participants.length > 0 && !participants.some(p => p.status !== 'unknown')) {
+      setError('Please set attendance status for at least one member');
+      return;
+    }
+
     try {
       setSaving(true);
       setError(null);
       const supabase = getSupabaseClient();
 
-      // Parse offering value to float if provided
-      const offeringValue = offering ? parseFloat(offering) : null;
-
-      // Prepare meeting record based on event category
-      const meetingRecord: any = {
+      // Create attendance meeting record
+      const meetingData = {
         event_category: eventCategory,
         meeting_date: meetingDate,
         meeting_type: meetingType,
-        topic,
-        notes,
-        location,
-        offering: offeringValue,
+        topic: topic || null,
+        notes: notes || null,
+        location: location || null,
+        offering: offering ? parseFloat(offering) : null,
+        is_recurring: false,
+        cell_group_id: eventCategory === 'cell_group' ? contextId : null,
+        ministry_id: eventCategory === 'ministry' ? contextId : null,
+        class_session_id: eventCategory === 'class' ? contextId : null,
       };
 
-      // Add the appropriate context ID based on event category
-      if (eventCategory === 'cell_group') {
-        meetingRecord.cell_group_id = contextId;
-      } else if (eventCategory === 'ministry') {
-        meetingRecord.ministry_id = contextId;
-      }
-
-      // 1. Create the meeting record
-      const { data: meetingData, error: meetingError } = await supabase
+      const { data: meetingRecord, error: meetingError } = await supabase
         .from('attendance_meetings')
-        .insert(meetingRecord)
-        .select();
+        .insert(meetingData)
+        .select('id')
+        .single();
 
       if (meetingError) throw meetingError;
 
-      if (!meetingData || meetingData.length === 0) {
-        throw new Error('Failed to create meeting record');
-      }
+      const meetingId = meetingRecord.id;
 
-      const meetingId = meetingData[0].id;
-
-      // 2. Record registered participants
-      const registeredParticipants = participants.filter(p => p.isRegistered);
-      if (registeredParticipants.length > 0) {
-        const participantRecords = registeredParticipants.map(p => ({
+      // Record participant attendance
+      if (participants.length > 0) {
+        const participantRecords = participants.map(p => ({
           meeting_id: meetingId,
           member_id: p.member_id,
           status: p.status,
+          is_registered: p.isRegistered,
         }));
 
         const { error: participantsError } = await supabase
@@ -379,15 +538,29 @@ function RecordAttendanceContent() {
         if (participantsError) throw participantsError;
       }
 
-      // 3. Record visitors
+      // Update class session status if this is a class attendance
+      if (eventCategory === 'class') {
+        try {
+          const { error: updateError } = await supabase
+            .from('class_sessions')
+            .update({ status: 'completed' })
+            .eq('id', contextId);
+
+          if (updateError) throw updateError;
+        } catch (error: any) {
+          // Log error but continue - this is not critical
+        }
+      }
+
+      // Record visitors
       if (visitors.length > 0) {
         const visitorRecords = visitors.map(v => ({
           meeting_id: meetingId,
           first_name: v.first_name,
           last_name: v.last_name,
-          phone: v.phone,
-          email: v.email,
-          notes: v.notes,
+          phone: v.phone || null,
+          email: v.email || null,
+          notes: v.notes || null,
         }));
 
         const { error: visitorsError } = await supabase
@@ -405,7 +578,6 @@ function RecordAttendanceContent() {
       }, 1500);
 
     } catch (error: any) {
-      
       setError(error.message || 'Failed to save attendance record');
       setSaving(false);
     }
@@ -425,128 +597,21 @@ function RecordAttendanceContent() {
         </div>
       )}
 
-      <div className="card mb-6">
-        <h2 className="text-xl font-semibold mb-4">Meeting Details</h2>
+      <div className="md:col-span-2 mb-4">
+        <EventCategorySelector
+          value={eventCategory}
+          onChange={handleEventCategoryChange}
+          disabled={loading || saving || success}
+        />
+      </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-          <div className="md:col-span-2">
-            <EventCategorySelector
-              value={eventCategory}
-              onChange={handleEventCategoryChange}
-              disabled={loading || saving || success}
-            />
-          </div>
-
-          <div className="md:col-span-2">
-            <ContextSelector
-              category={eventCategory}
-              value={contextId}
-              onChange={handleContextChange}
-              disabled={loading || saving || success}
-            />
-          </div>
-
-          <div>
-            <label htmlFor="meeting_date" className="block text-sm font-medium text-gray-700 mb-1">
-              Meeting Date *
-            </label>
-            <input
-              id="meeting_date"
-              type="date"
-              value={meetingDate}
-              onChange={(e) => setMeetingDate(e.target.value)}
-              className="input-field"
-              disabled={saving || success}
-              required
-            />
-          </div>
-
-          <div>
-            <label htmlFor="meeting_type" className="block text-sm font-medium text-gray-700 mb-1">
-              Meeting Type
-            </label>
-            <select
-              id="meeting_type"
-              value={meetingType}
-              onChange={(e) => setMeetingType(e.target.value)}
-              className="input-field"
-              disabled={saving || success}
-            >
-              <option value="regular">Regular Meeting</option>
-              <option value="special">Special Meeting</option>
-              <option value="outreach">Outreach</option>
-              <option value="prayer">Prayer Meeting</option>
-              <option value="other">Other</option>
-            </select>
-          </div>
-
-          <div>
-            <label htmlFor="location" className="block text-sm font-medium text-gray-700 mb-1">
-              Location
-            </label>
-            <input
-              id="location"
-              type="text"
-              value={location}
-              onChange={(e) => setLocation(e.target.value)}
-              className="input-field"
-              disabled={saving || success}
-              placeholder="Meeting location"
-            />
-          </div>
-
-          <div>
-            <label htmlFor="offering" className="block text-sm font-medium text-gray-700 mb-1">
-              Offering Amount
-            </label>
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <span className="text-gray-500">Rp</span>
-              </div>
-              <input
-                id="offering"
-                type="number"
-                min="0"
-                step="0.01"
-                value={offering}
-                onChange={(e) => setOffering(e.target.value)}
-                className="input-field pl-10"
-                disabled={saving || success}
-                placeholder="0.00"
-              />
-            </div>
-          </div>
-
-          <div className="md:col-span-2">
-            <label htmlFor="topic" className="block text-sm font-medium text-gray-700 mb-1">
-              Topic/Theme
-            </label>
-            <input
-              id="topic"
-              type="text"
-              value={topic}
-              onChange={(e) => setTopic(e.target.value)}
-              className="input-field"
-              disabled={saving || success}
-              placeholder="Topic or theme of the meeting"
-            />
-          </div>
-
-          <div className="md:col-span-2">
-            <label htmlFor="notes" className="block text-sm font-medium text-gray-700 mb-1">
-              Notes
-            </label>
-            <textarea
-              id="notes"
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              className="input-field"
-              disabled={saving || success}
-              rows={3}
-              placeholder="Any notes about this meeting"
-            ></textarea>
-          </div>
-        </div>
+      <div className="md:col-span-2 mb-4">
+        <ContextSelector
+          category={eventCategory}
+          value={contextId}
+          onChange={handleContextChange}
+          disabled={loading || saving || success}
+        />
       </div>
 
       {loading ? (
@@ -555,220 +620,31 @@ function RecordAttendanceContent() {
         </div>
       ) : (
         <>
-          {contextId && (
-            <div className="card mb-6">
-              <h2 className="text-xl font-semibold mb-4">Attendance</h2>
-
-              {participants.length === 0 ? (
-                <p className="text-gray-500">No members found in this {eventCategory === 'cell_group' ? 'cell group' : eventCategory === 'ministry' ? 'ministry' : 'context'}.</p>
-              ) : (
-                <div className="overflow-x-auto">
-                  <table className="min-w-full divide-y divide-gray-200">
-                    <thead className="bg-gray-50">
-                      <tr>
-                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Name
-                        </th>
-                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Status
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
-                      {participants.map((participant) => (
-                        <tr key={participant.member_id}>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="text-sm font-medium text-gray-900">
-                              {participant.first_name} {participant.last_name}
-                            </div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="flex space-x-2">
-                              <button
-                                type="button"
-                                onClick={() => handleParticipantStatusChange(participant.member_id, 'present')}
-                                className={`px-3 py-1 rounded-full text-xs font-medium ${
-                                  participant.status === 'present'
-                                    ? 'bg-green-100 text-green-800 ring-2 ring-green-600'
-                                    : 'bg-green-50 text-green-600 hover:bg-green-100'
-                                }`}
-                                disabled={saving || success}
-                              >
-                                Present
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => handleParticipantStatusChange(participant.member_id, 'absent')}
-                                className={`px-3 py-1 rounded-full text-xs font-medium ${
-                                  participant.status === 'absent'
-                                    ? 'bg-red-100 text-red-800 ring-2 ring-red-600'
-                                    : 'bg-red-50 text-red-600 hover:bg-red-100'
-                                }`}
-                                disabled={saving || success}
-                              >
-                                Absent
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => handleParticipantStatusChange(participant.member_id, 'late')}
-                                className={`px-3 py-1 rounded-full text-xs font-medium ${
-                                  participant.status === 'late'
-                                    ? 'bg-yellow-100 text-yellow-800 ring-2 ring-yellow-600'
-                                    : 'bg-yellow-50 text-yellow-600 hover:bg-yellow-100'
-                                }`}
-                                disabled={saving || success}
-                              >
-                                Late
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => handleParticipantStatusChange(participant.member_id, 'excused')}
-                                className={`px-3 py-1 rounded-full text-xs font-medium ${
-                                  participant.status === 'excused'
-                                    ? 'bg-blue-100 text-blue-800 ring-2 ring-blue-600'
-                                    : 'bg-blue-50 text-blue-600 hover:bg-blue-100'
-                                }`}
-                                disabled={saving || success}
-                              >
-                                Excused
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>
-          )}
-
-          {contextId && (
-            <div className="card mb-6">
-              <h2 className="text-xl font-semibold mb-4">New Visitors</h2>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                <div>
-                  <label htmlFor="visitor_first_name" className="block text-sm font-medium text-gray-700 mb-1">
-                    First Name *
-                  </label>
-                  <input
-                    id="visitor_first_name"
-                    name="first_name"
-                    type="text"
-                    value={newVisitor.first_name}
-                    onChange={handleVisitorChange}
-                    className="input-field"
-                    disabled={saving || success}
-                    placeholder="First name"
-                  />
-                </div>
-
-                <div>
-                  <label htmlFor="visitor_last_name" className="block text-sm font-medium text-gray-700 mb-1">
-                    Last Name *
-                  </label>
-                  <input
-                    id="visitor_last_name"
-                    name="last_name"
-                    type="text"
-                    value={newVisitor.last_name}
-                    onChange={handleVisitorChange}
-                    className="input-field"
-                    disabled={saving || success}
-                    placeholder="Last name"
-                  />
-                </div>
-
-                <div>
-                  <label htmlFor="visitor_phone" className="block text-sm font-medium text-gray-700 mb-1">
-                    Phone
-                  </label>
-                  <input
-                    id="visitor_phone"
-                    name="phone"
-                    type="tel"
-                    value={newVisitor.phone}
-                    onChange={handleVisitorChange}
-                    className="input-field"
-                    disabled={saving || success}
-                    placeholder="Phone number"
-                  />
-                </div>
-
-                <div>
-                  <label htmlFor="visitor_email" className="block text-sm font-medium text-gray-700 mb-1">
-                    Email
-                  </label>
-                  <input
-                    id="visitor_email"
-                    name="email"
-                    type="email"
-                    value={newVisitor.email}
-                    onChange={handleVisitorChange}
-                    className="input-field"
-                    disabled={saving || success}
-                    placeholder="Email address"
-                  />
-                </div>
-
-                <div className="md:col-span-2">
-                  <label htmlFor="visitor_notes" className="block text-sm font-medium text-gray-700 mb-1">
-                    Notes
-                  </label>
-                  <textarea
-                    id="visitor_notes"
-                    name="notes"
-                    value={newVisitor.notes}
-                    onChange={handleVisitorChange}
-                    className="input-field"
-                    disabled={saving || success}
-                    rows={2}
-                    placeholder="Any notes about this visitor"
-                  ></textarea>
-                </div>
-
-                <div className="md:col-span-2">
-                  <button
-                    type="button"
-                    onClick={handleAddVisitor}
-                    className="btn-secondary"
-                    disabled={!newVisitor.first_name || !newVisitor.last_name || saving || success}
-                  >
-                    Add Visitor
-                  </button>
-                </div>
-              </div>
-
-              {visitors.length > 0 && (
-                <div className="mt-4">
-                  <h3 className="text-lg font-medium mb-2">Added Visitors</h3>
-                  <div className="space-y-3">
-                    {visitors.map((visitor, index) => (
-                      <div key={index} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                        <div>
-                          <p className="font-medium">{visitor.first_name} {visitor.last_name}</p>
-                          <p className="text-sm text-gray-600">
-                            {visitor.phone && <span className="mr-3">{visitor.phone}</span>}
-                            {visitor.email && <span>{visitor.email}</span>}
-                          </p>
-                          {visitor.notes && <p className="text-sm text-gray-500 mt-1">{visitor.notes}</p>}
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => handleRemoveVisitor(index)}
-                          className="text-red-600 hover:text-red-800"
-                          disabled={saving || success}
-                        >
-                          Remove
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
+          <DynamicAttendanceForm
+            eventCategory={eventCategory}
+            contextId={contextId}
+            meetingDate={meetingDate}
+            setMeetingDate={setMeetingDate}
+            meetingType={meetingType}
+            setMeetingType={setMeetingType}
+            location={location}
+            setLocation={setLocation}
+            topic={topic}
+            setTopic={setTopic}
+            notes={notes}
+            setNotes={setNotes}
+            offering={offering}
+            setOffering={setOffering}
+            participants={participants}
+            handleParticipantStatusChange={handleParticipantStatusChange}
+            newVisitor={newVisitor}
+            handleVisitorChange={handleVisitorChange}
+            handleAddVisitor={handleAddVisitor}
+            handleRemoveVisitor={handleRemoveVisitor}
+            visitors={visitors}
+            saving={saving}
+            success={success}
+          />
 
           <div className="flex justify-end">
             <button
@@ -793,6 +669,7 @@ function getCategoryContextLabel(category: EventCategory): string {
     case 'ministry': return 'Ministry';
     case 'prayer': return 'Prayer Type';
     case 'service': return 'Service Type';
+    case 'class': return 'Class Session';
     default: return 'Event Type';
   }
 }

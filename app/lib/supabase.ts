@@ -4,9 +4,12 @@ import { Database } from "../types/supabase";
 // Create a single supabase client for interacting with your database
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
 
-// Create a singleton instance of the Supabase client
+// Create singleton instances of the Supabase client
 let supabaseInstance: ReturnType<typeof createClient<Database>> | null = null;
+let supabaseServiceInstance: ReturnType<typeof createClient<Database>> | null =
+  null;
 
 export const getSupabaseClient = () => {
   if (!supabaseInstance) {
@@ -18,6 +21,23 @@ export const getSupabaseClient = () => {
     });
   }
   return supabaseInstance;
+};
+
+// Get a Supabase client with service role for admin operations
+export const getServiceSupabaseClient = () => {
+  if (!supabaseServiceInstance) {
+    supabaseServiceInstance = createClient<Database>(
+      supabaseUrl,
+      supabaseServiceKey,
+      {
+        auth: {
+          persistSession: false,
+          autoRefreshToken: false,
+        },
+      }
+    );
+  }
+  return supabaseServiceInstance;
 };
 
 // Function to check if a user is an admin
