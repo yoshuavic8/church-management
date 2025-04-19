@@ -36,9 +36,14 @@ export async function POST(req: NextRequest) {
     }
 
     // Verify current password
+    console.log("Verifying current password for member:", memberId);
+    console.log("Password hash in database:", member.password_hash);
+
     const isValid = await verifyPassword(currentPassword, member.password_hash);
+    console.log("Current password verification result:", isValid);
 
     if (!isValid) {
+      console.log("Current password verification failed");
       return NextResponse.json(
         { error: "Current password is incorrect" },
         { status: 401 }
@@ -47,8 +52,10 @@ export async function POST(req: NextRequest) {
 
     // Hash new password
     const newPasswordHash = await hashPassword(newPassword);
+    console.log("New password hash:", newPasswordHash);
 
     // Update password in database
+    console.log("Updating password in database for member:", memberId);
     const { error: updateError } = await supabase
       .from("members")
       .update({

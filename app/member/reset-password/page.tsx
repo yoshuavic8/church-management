@@ -155,7 +155,6 @@ export default function ResetPassword() {
             </form>
           </>
         )}
-      </div>
     </div>
   );
 }

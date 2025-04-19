@@ -45,9 +45,14 @@ export async function POST(req: NextRequest) {
     }
 
     // Verify password
+    console.log("Verifying password for member:", member.id);
+    console.log("Password hash in database:", member.password_hash);
+
     const isValid = await verifyPassword(password, member.password_hash);
+    console.log("Password verification result:", isValid);
 
     if (!isValid) {
+      console.log("Password verification failed");
       return NextResponse.json(
         { error: "Invalid credentials" },
         { status: 401 }
