@@ -148,7 +148,7 @@ export default function MemberLogin() {
               />
             </div>
             <div className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-              <p>If this is your first login, your default password is your date of birth in format DDMMYYYY (e.g., 31122000 for December 31, 2000).</p>
+              <p>If this is your first login, your default password is your date of birth in format DDMMYYYY (e.g., 31122000 for December 31, 2000). If you don't have a date of birth recorded, your default password is "Welcome123".</p>
             </div>
           </div>
 

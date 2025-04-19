@@ -138,37 +138,10 @@ export default function MemberForm({ initialData = {}, mode }: MemberFormProps) 
           ? `Default password is the date of birth in format DDMMYYYY.`
           : `Default password is "Welcome123".`;
 
-        // Create auth user
-        const { error: authError } = await supabase.auth.admin.createUser({
-          email: formData.email,
-          email_confirm: true,
-          user_metadata: { role: 'member' },
-          user_id: memberId
-        });
+        // No need to create auth user or send password reset email since we're using custom password auth
 
-        if (authError) {
-          // If auth user creation fails, we should delete the member record
-          await supabase
-            .from('members')
-            .delete()
-            .eq('id', memberId);
-
-          throw authError;
-        }
-
-        // Send password reset email
-        const { error: resetError } = await supabase.auth.resetPasswordForEmail(
-          formData.email,
-          { redirectTo: `${window.location.origin}/auth/reset-password` }
-        );
-
-        if (resetError) {
-          // Don't throw here, as the member was already created successfully
-          setShowPasswordInfo(true);
-          setSuccess(`Member created successfully. ${passwordInfo} Member will be prompted to change password on first login.`);
-        } else {
-          setSuccess(`Member created successfully. ${passwordInfo} Password reset email has been sent to ${formData.email}. Member will be prompted to change password on first login.`);
-        }
+        // Set success message with password info
+        setSuccess(`Member created successfully. ${passwordInfo} Member will be prompted to change password on first login.`);
 
 
 
