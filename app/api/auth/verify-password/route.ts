@@ -47,6 +47,18 @@ export async function POST(req: NextRequest) {
     // Verify password
     console.log("Verifying password for member:", member.id);
     console.log("Password hash in database:", member.password_hash);
+    console.log("Password to verify (length):", password.length);
+
+    // Try direct comparison first for debugging
+    try {
+      const directCompare = await bcrypt.compare(
+        password,
+        member.password_hash
+      );
+      console.log("Direct bcrypt compare result:", directCompare);
+    } catch (compareError) {
+      console.error("Error in direct bcrypt compare:", compareError);
+    }
 
     const isValid = await verifyPassword(password, member.password_hash);
     console.log("Password verification result:", isValid);

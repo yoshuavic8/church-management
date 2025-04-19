@@ -44,6 +44,7 @@ export default function ResetPassword() {
       console.log('Current password length:', currentPassword.length);
       console.log('New password length:', newPassword.length);
 
+      // Use the regular endpoint
       const response = await fetch('/api/auth/reset-password', {
         method: 'POST',
         headers: {
@@ -73,42 +74,17 @@ export default function ResetPassword() {
         // Update password_reset_required flag in client state
         await updatePasswordResetFlag(user.id);
 
-        // Explicitly update password_reset_required flag in database
-        try {
-          const flagResponse = await fetch('/api/auth/update-password-flag', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              memberId: user.id,
-            }),
-          });
-
-          const flagData = await flagResponse.json();
-          console.log('Flag update response:', flagData);
-        } catch (flagError) {
-          console.error('Error updating password flag:', flagError);
-        }
-
-        // First try direct update
-        const updated = await updateUserData(user.id);
-        console.log('Direct update result:', updated);
-
-        // Then refresh user data as backup
+        // Refresh user data
         await refreshUser();
 
-        // Force reload localStorage data
+        // Update localStorage
         localStorage.setItem('memberEmail', user.email);
         localStorage.setItem('memberId', user.id);
-        console.log('Updated localStorage with user data');
 
         // Update user object in localStorage to reflect password_reset_required=false
-        if (user) {
-          const updatedUser = { ...user, password_reset_required: false };
-          localStorage.setItem('memberData', JSON.stringify(updatedUser));
-          console.log('Updated localStorage with password_reset_required=false');
-        }
+        const updatedUser = { ...user, password_reset_required: false };
+        localStorage.setItem('memberData', JSON.stringify(updatedUser));
+        console.log('Updated user data in localStorage');
       }
 
       // Redirect to dashboard after 3 seconds
