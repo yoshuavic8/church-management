@@ -79,7 +79,7 @@ export default function MemberDashboard() {
         }
 
         // Get upcoming meetings
-        const today = new Date();
+        // Use the existing today variable instead of creating a new one
         const todayStr = today.toISOString().split('T')[0]; // Format as YYYY-MM-DD
 
         const { data: upcomingData, error: upcomingError } = await supabase
