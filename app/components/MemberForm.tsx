@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { getSupabaseClient } from '../lib/supabase';
+import { hashPassword, generatePasswordFromDOB } from '../utils/passwordUtils';
 
 type MemberFormProps = {
   initialData?: {
@@ -110,15 +111,32 @@ export default function MemberForm({ initialData = {}, mode }: MemberFormProps) 
         // Create a UUID for the new member
         const memberId = crypto.randomUUID();
 
-        // Insert new member with the generated ID
+        // Generate default password from date of birth
+        const defaultPassword = generatePasswordFromDOB(formData.date_of_birth);
+
+        // Hash the password
+        const passwordHash = await hashPassword(defaultPassword);
+
+        // Insert new member with the generated ID and password hash
         const { error } = await supabase
           .from('members')
           .insert([{
             id: memberId,
-            ...dataToSubmit
+            ...dataToSubmit,
+            password_hash: passwordHash,
+            password_reset_required: true,
+            last_password_change: new Date().toISOString()
           }]);
 
         if (error) throw error;
+
+        // Log the default password for the admin to see
+        console.log(`Default password for ${formData.first_name} ${formData.last_name}: ${defaultPassword}`);
+
+        // Add password info to success message
+        const passwordInfo = formData.date_of_birth
+          ? `Default password is the date of birth in format DDMMYYYY.`
+          : `Default password is "Welcome123".`;
 
         // Create auth user
         const { error: authError } = await supabase.auth.admin.createUser({
@@ -145,11 +163,11 @@ export default function MemberForm({ initialData = {}, mode }: MemberFormProps) 
         );
 
         if (resetError) {
-
           // Don't throw here, as the member was already created successfully
           setShowPasswordInfo(true);
+          setSuccess(`Member created successfully. ${passwordInfo} Member will be prompted to change password on first login.`);
         } else {
-          setSuccess('Member created successfully. Password reset email has been sent to ' + formData.email);
+          setSuccess(`Member created successfully. ${passwordInfo} Password reset email has been sent to ${formData.email}. Member will be prompted to change password on first login.`);
         }
 
 

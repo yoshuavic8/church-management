@@ -6,45 +6,18 @@ import Link from 'next/link';
 import { useAuth } from '../../../contexts/AuthContext';
 
 export default function MemberLogin() {
-  const [token, setToken] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
-  const [loginMode, setLoginMode] = useState<'token' | 'password'>('password'); // Default to password login
   const router = useRouter();
-  const { loginMember, loginMemberWithPassword, setUser, setIsMember } = useAuth();
+  const { loginMemberWithPassword } = useAuth();
 
-  // Handle token-based login
-  const handleTokenLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setError(null);
 
-    if (!token) {
-      setError('Please enter your token');
-      setLoading(false);
-      return;
-    }
 
-    try {
-      const result = await loginMember(token);
-
-      if (result.success) {
-        router.push('/member/dashboard');
-      } else {
-        setError(result.error || 'Login failed. Please try again.');
-      }
-    } catch (err: any) {
-      setError(err.message || 'An unexpected error occurred');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Handle password-based login
-  const handlePasswordLogin = async (e: React.FormEvent) => {
+  // Handle member login
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
@@ -56,7 +29,32 @@ export default function MemberLogin() {
     }
 
     try {
+      console.log('Attempting to login with email:', email);
+
+      // First, check if the member exists and has a password set
+      const response = await fetch('/api/auth/check-member', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email }),
+      });
+
+      const checkData = await response.json();
+      console.log('Member check result:', checkData);
+
+      if (!response.ok) {
+        if (checkData.needsPasswordSetup) {
+          setError('Your account does not have a password set. Please contact an administrator to set up your password.');
+          setLoading(false);
+          return;
+        }
+        throw new Error(checkData.error || 'Login failed');
+      }
+
+      // Proceed with login
       const result = await loginMemberWithPassword(email, password);
+      console.log('Login result:', result);
 
       if (result.success) {
         // Check if password reset is required
@@ -66,9 +64,14 @@ export default function MemberLogin() {
           router.push('/member/dashboard');
         }
       } else {
-        setError(result.error || 'Login failed. Please try again.');
+        if (result.needsPasswordSetup) {
+          setError('Your account does not have a password set. Please contact an administrator to set up your password.');
+        } else {
+          setError(result.error || 'Login failed. Please try again.');
+        }
       }
     } catch (err: any) {
+      console.error('Login error:', err);
       setError(err.message || 'An unexpected error occurred');
     } finally {
       setLoading(false);
@@ -82,26 +85,9 @@ export default function MemberLogin() {
           <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900 dark:text-white">
             Member Login
           </h2>
-          <div className="mt-4 flex justify-center space-x-4">
-            <button
-              type="button"
-              onClick={() => setLoginMode('password')}
-              className={`px-4 py-2 rounded-md ${loginMode === 'password'
-                ? 'bg-primary text-white'
-                : 'bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300'}`}
-            >
-              Login with Password
-            </button>
-            <button
-              type="button"
-              onClick={() => setLoginMode('token')}
-              className={`px-4 py-2 rounded-md ${loginMode === 'token'
-                ? 'bg-primary text-white'
-                : 'bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300'}`}
-            >
-              Login with Token
-            </button>
-          </div>
+          <p className="mt-2 text-center text-sm text-gray-600 dark:text-gray-400">
+            Sign in with your email and password
+          </p>
         </div>
 
         {error && (
@@ -124,88 +110,58 @@ export default function MemberLogin() {
           </div>
         )}
 
-        {loginMode === 'password' ? (
-          <form className="mt-8 space-y-6" onSubmit={handlePasswordLogin}>
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                Email
-              </label>
-              <div className="mt-1">
-                <input
-                  id="email"
-                  name="email"
-                  type="email"
-                  required
-                  className="appearance-none block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-primary focus:border-primary dark:bg-gray-700 dark:text-white sm:text-sm"
-                  placeholder="Enter your email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  disabled={loading}
-                />
-              </div>
-            </div>
-
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                Password
-              </label>
-              <div className="mt-1">
-                <input
-                  id="password"
-                  name="password"
-                  type="password"
-                  required
-                  className="appearance-none block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-primary focus:border-primary dark:bg-gray-700 dark:text-white sm:text-sm"
-                  placeholder="Enter your password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  disabled={loading}
-                />
-              </div>
-            </div>
-
-            <div>
-              <button
-                type="submit"
-                className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
+        <form className="mt-8 space-y-6" onSubmit={handleLogin}>
+          <div>
+            <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+              Email
+            </label>
+            <div className="mt-1">
+              <input
+                id="email"
+                name="email"
+                type="email"
+                required
+                className="appearance-none block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-primary focus:border-primary dark:bg-gray-700 dark:text-white sm:text-sm"
+                placeholder="Enter your email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
                 disabled={loading}
-              >
-                {loading ? 'Signing in...' : 'Sign in'}
-              </button>
+              />
             </div>
-          </form>
-        ) : (
-          <form className="mt-8 space-y-6" onSubmit={handleTokenLogin}>
-            <div>
-              <label htmlFor="token" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                Access Token
-              </label>
-              <div className="mt-1">
-                <input
-                  id="token"
-                  name="token"
-                  type="text"
-                  required
-                  className="appearance-none block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-primary focus:border-primary dark:bg-gray-700 dark:text-white sm:text-sm"
-                  placeholder="Enter your access token"
-                  value={token}
-                  onChange={(e) => setToken(e.target.value)}
-                  disabled={loading}
-                />
-              </div>
-            </div>
+          </div>
 
-            <div>
-              <button
-                type="submit"
-                className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
+          <div>
+            <label htmlFor="password" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+              Password
+            </label>
+            <div className="mt-1">
+              <input
+                id="password"
+                name="password"
+                type="password"
+                required
+                className="appearance-none block w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-primary focus:border-primary dark:bg-gray-700 dark:text-white sm:text-sm"
+                placeholder="Enter your password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
                 disabled={loading}
-              >
-                {loading ? 'Signing in...' : 'Sign in'}
-              </button>
+              />
             </div>
-          </form>
-        )}
+            <div className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+              <p>If this is your first login, your default password is your date of birth in format DDMMYYYY (e.g., 31122000 for December 31, 2000).</p>
+            </div>
+          </div>
+
+          <div>
+            <button
+              type="submit"
+              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
+              disabled={loading}
+            >
+              {loading ? 'Signing in...' : 'Sign in'}
+            </button>
+          </div>
+        </form>
 
         <div className="mt-4 text-center">
           <p className="text-sm text-gray-600 dark:text-gray-400">

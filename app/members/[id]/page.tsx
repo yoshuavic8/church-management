@@ -38,10 +38,7 @@ export default function MemberDetailPage() {
   const [resetPasswordLoading, setResetPasswordLoading] = useState(false);
   const [resetPasswordSuccess, setResetPasswordSuccess] = useState(false);
   const [resetPasswordError, setResetPasswordError] = useState<string | null>(null);
-  const [setPasswordLoading, setSetPasswordLoading] = useState(false);
-  const [setPasswordSuccess, setSetPasswordSuccess] = useState(false);
-  const [setPasswordError, setSetPasswordError] = useState<string | null>(null);
-  const [defaultPassword, setDefaultPassword] = useState<string | null>(null);
+
   const [isAdminUser, setIsAdminUser] = useState(false);
   const { isAdmin: authIsAdmin } = useAuth();
 
@@ -170,36 +167,7 @@ export default function MemberDetailPage() {
     }
   };
 
-  const handleSetPassword = async () => {
-    setSetPasswordLoading(true);
-    setSetPasswordSuccess(false);
-    setSetPasswordError(null);
-    setDefaultPassword(null);
 
-    try {
-      // Call API to set default password
-      const response = await fetch('/api/auth/set-default-password', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ memberId: member.id }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to set default password');
-      }
-
-      setSetPasswordSuccess(true);
-      setDefaultPassword(data.defaultPassword);
-    } catch (error: any) {
-      setSetPasswordError(error.message || 'An unexpected error occurred');
-    } finally {
-      setSetPasswordLoading(false);
-    }
-  };
 
   // Define the action buttons for the header
   const actionButtons = (
@@ -380,33 +348,7 @@ export default function MemberDetailPage() {
               <Link href={`/admin/documents/generate?member=${member.id}`} className="text-primary hover:underline block">
                 Generate Documents
               </Link>
-              {isAdminUser && (
-                <button
-                  onClick={handleSetPassword}
-                  disabled={setPasswordLoading}
-                  className="text-primary hover:underline block w-full text-left"
-                >
-                  {setPasswordLoading ? 'Setting...' : 'Set Default Password'}
-                </button>
-              )}
 
-              {setPasswordSuccess && (
-                <div className="mt-2 p-2 bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-800 text-green-700 dark:text-green-400 text-sm rounded">
-                  <p>Default password set successfully!</p>
-                  {defaultPassword && (
-                    <div className="mt-1">
-                      <p className="font-medium">Password: <span className="font-mono">{defaultPassword}</span></p>
-                      <p className="text-xs mt-1">Please share this password with the member. They will be prompted to change it on first login.</p>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {setPasswordError && (
-                <div className="mt-2 p-2 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 text-sm rounded">
-                  {setPasswordError}
-                </div>
-              )}
 
               {member.email && (
                 <button

@@ -1,14 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseClient } from "../../../lib/supabase";
-import { verifyPassword } from "../../../utils/passwordUtils";
 
 export async function POST(req: NextRequest) {
   try {
-    const { email, password } = await req.json();
+    const { email } = await req.json();
+    console.log("Checking member with email:", email);
 
-    if (!email || !password) {
+    if (!email) {
       return NextResponse.json(
-        { error: "Email and password are required" },
+        { error: "Email is required" },
         { status: 400 }
       );
     }
@@ -19,20 +19,21 @@ export async function POST(req: NextRequest) {
     // Get member by email
     const { data: member, error } = await supabase
       .from("members")
-      .select("*")
+      .select("id, email, password_hash")
       .eq("email", email)
       .single();
 
+    console.log("Member check result:", { member, error });
+
     if (error || !member) {
       return NextResponse.json(
-        { error: "Invalid credentials" },
-        { status: 401 }
+        { error: "Member not found" },
+        { status: 404 }
       );
     }
 
-    // If password_hash is not set, return error
+    // Check if password is set
     if (!member.password_hash) {
-      console.log("Password not set for member:", member.id);
       return NextResponse.json(
         {
           error: "Password not set for this account",
@@ -44,26 +45,14 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Verify password
-    const isValid = await verifyPassword(password, member.password_hash);
-
-    if (!isValid) {
-      return NextResponse.json(
-        { error: "Invalid credentials" },
-        { status: 401 }
-      );
-    }
-
-    // Return member data without password_hash
-    const { password_hash, ...memberData } = member;
-
+    // Return success
     return NextResponse.json({
       success: true,
-      member: memberData,
-      passwordResetRequired: member.password_reset_required,
+      memberId: member.id,
+      hasPassword: true,
     });
   } catch (error) {
-    console.error("Error verifying password:", error);
+    console.error("Error checking member:", error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
