@@ -14,7 +14,7 @@ export default function MemberLogin() {
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [loginMode, setLoginMode] = useState<'token' | 'password'>('password'); // Default to password login
   const router = useRouter();
-  const { loginMember, setUser, setIsMember } = useAuth();
+  const { loginMember, loginMemberWithPassword, setUser, setIsMember } = useAuth();
 
   // Handle token-based login
   const handleTokenLogin = async (e: React.FormEvent) => {

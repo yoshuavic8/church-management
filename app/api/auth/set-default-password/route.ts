@@ -32,19 +32,22 @@ export async function POST(req: NextRequest) {
 
     // Generate default password
     const defaultPassword = generateSecurePassword(10);
+    console.log("Generated default password:", defaultPassword);
 
     // Hash password
     const passwordHash = await hashPassword(defaultPassword);
+    console.log("Generated password hash:", passwordHash);
 
     // Update member with password hash
-    const { error: updateError } = await supabase
+    const { data: updateData, error: updateError } = await supabase
       .from("members")
       .update({
         password_hash: passwordHash,
         password_reset_required: true,
         last_password_change: new Date().toISOString(),
       })
-      .eq("id", memberId);
+      .eq("id", memberId)
+      .select();
 
     if (updateError) {
       console.error("Error setting default password:", updateError);
