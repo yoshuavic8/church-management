@@ -42,7 +42,7 @@ function SelfCheckinContent() {
             checkInMember(user.id);
           }
         } catch (error) {
-          
+
         }
       }
     };
@@ -61,7 +61,12 @@ function SelfCheckinContent() {
       const { data, error } = await supabase
         .from('attendance_meetings')
         .select(`
-          *,
+          id,
+          meeting_date,
+          meeting_type,
+          topic,
+          event_category,
+          is_realtime,
           cell_group:cell_group_id(name),
           ministry:ministry_id(name)
         `)
@@ -81,7 +86,7 @@ function SelfCheckinContent() {
       setMeeting(data);
       setStep('enter-member-id');
     } catch (error: any) {
-      
+
       setError(error.message || 'Failed to fetch meeting details');
     } finally {
       setLoading(false);
@@ -101,7 +106,7 @@ function SelfCheckinContent() {
 
       fetchMeetingDetails(meetingParam);
     } catch (error: any) {
-      
+
       setError('Invalid QR code format. Please scan a valid meeting QR code.');
     }
   };
@@ -208,7 +213,7 @@ function SelfCheckinContent() {
       setSuccess('Check-in successful!');
       setStep('success');
     } catch (error: any) {
-      
+
       setError(error.message || 'Failed to check in');
     } finally {
       setLoading(false);
