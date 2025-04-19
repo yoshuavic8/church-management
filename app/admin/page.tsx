@@ -17,6 +17,21 @@ export default function AdminPage() {
   const [loadingUsers, setLoadingUsers] = useState(false);
   const [userError, setUserError] = useState<string | null>(null);
 
+  // Documents state
+  const [recentDocuments, setRecentDocuments] = useState<any[]>([]);
+  const [loadingDocuments, setLoadingDocuments] = useState(false);
+  const [documentError, setDocumentError] = useState<string | null>(null);
+
+  // Church settings state
+  const [churchSettings, setChurchSettings] = useState({
+    name: 'Grace Community Church',
+    email: 'info@gracechurch.org',
+    phone: '123-456-7890',
+    website: 'https://gracechurch.org',
+    address: '123 Main St, City, State 12345'
+  });
+  const [loadingSettings, setLoadingSettings] = useState(false);
+
   // Fetch recent articles from Supabase
   const fetchRecentArticles = async () => {
     try {
@@ -67,12 +82,16 @@ export default function AdminPage() {
     }
   };
 
-  // Load recent articles when the component mounts
+  // Load data when the component mounts or tab changes
   useEffect(() => {
     if (activeTab === 'content') {
       fetchRecentArticles();
     } else if (activeTab === 'users') {
       fetchRecentUsers();
+    } else if (activeTab === 'documents') {
+      fetchRecentDocuments();
+    } else if (activeTab === 'settings') {
+      fetchChurchSettings();
     }
   }, [activeTab]);
 
@@ -113,6 +132,58 @@ export default function AdminPage() {
       case 1:
       default:
         return 'Member';
+    }
+  };
+
+  // Fetch recent documents
+  const fetchRecentDocuments = async () => {
+    try {
+      setLoadingDocuments(true);
+      setDocumentError(null);
+      const supabase = getSupabaseClient();
+
+      // Since we don't have a documents table yet, we'll fetch baptized members
+      // to simulate recent baptism certificates
+      const { data, error } = await supabase
+        .from('members')
+        .select('id, first_name, last_name, baptism_date, is_baptized')
+        .eq('is_baptized', true)
+        .order('baptism_date', { ascending: false })
+        .limit(3);
+
+      if (error) throw error;
+
+      // Transform the data to simulate document records
+      const documents = data?.map(member => ({
+        id: member.id,
+        type: 'Baptism Certificate',
+        member_name: `${member.first_name} ${member.last_name}`,
+        generated_by: 'System Administrator',
+        generated_date: member.baptism_date,
+      })) || [];
+
+      setRecentDocuments(documents);
+    } catch (error: any) {
+      console.error('Error fetching recent documents:', error);
+      setDocumentError(error.message || 'Failed to load recent documents');
+    } finally {
+      setLoadingDocuments(false);
+    }
+  };
+
+  // Fetch church settings
+  const fetchChurchSettings = async () => {
+    try {
+      setLoadingSettings(true);
+      // In a real implementation, we would fetch settings from a settings table
+      // For now, we'll just simulate a delay
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      // Use default settings or fetch from API in the future
+      setLoadingSettings(false);
+    } catch (error: any) {
+      console.error('Error fetching church settings:', error);
+      setLoadingSettings(false);
     }
   };
 
@@ -273,33 +344,38 @@ export default function AdminPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
-                  <tr>
-                    <td className="py-3 px-4">Baptism Certificate</td>
-                    <td className="py-3 px-4">John Doe</td>
-                    <td className="py-3 px-4">Pastor Jane Smith</td>
-                    <td className="py-3 px-4">Apr 10, 2023</td>
-                    <td className="py-3 px-4">
-                      <button className="text-primary hover:underline">Download</button>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td className="py-3 px-4">Membership Certificate</td>
-                    <td className="py-3 px-4">Jane Smith</td>
-                    <td className="py-3 px-4">Pastor John Doe</td>
-                    <td className="py-3 px-4">Apr 8, 2023</td>
-                    <td className="py-3 px-4">
-                      <button className="text-primary hover:underline">Download</button>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td className="py-3 px-4">Marriage Certificate</td>
-                    <td className="py-3 px-4">Michael & Sarah Johnson</td>
-                    <td className="py-3 px-4">Pastor Jane Smith</td>
-                    <td className="py-3 px-4">Apr 5, 2023</td>
-                    <td className="py-3 px-4">
-                      <button className="text-primary hover:underline">Download</button>
-                    </td>
-                  </tr>
+                  {loadingDocuments ? (
+                    <tr>
+                      <td colSpan={5} className="py-4 text-center">
+                        <div className="inline-block animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-primary"></div>
+                        <p className="mt-2 text-sm text-gray-500">Loading documents...</p>
+                      </td>
+                    </tr>
+                  ) : documentError ? (
+                    <tr>
+                      <td colSpan={5} className="py-4 text-center text-red-500">
+                        {documentError}
+                      </td>
+                    </tr>
+                  ) : recentDocuments.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} className="py-4 text-center text-gray-500">
+                        No documents found. Generate your first document using the options above.
+                      </td>
+                    </tr>
+                  ) : (
+                    recentDocuments.map(doc => (
+                      <tr key={doc.id}>
+                        <td className="py-3 px-4">{doc.type}</td>
+                        <td className="py-3 px-4">{doc.member_name}</td>
+                        <td className="py-3 px-4">{doc.generated_by}</td>
+                        <td className="py-3 px-4">{doc.generated_date ? new Date(doc.generated_date).toLocaleDateString() : '-'}</td>
+                        <td className="py-3 px-4">
+                          <button className="text-primary hover:underline">Download</button>
+                        </td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
             </div>
@@ -533,66 +609,78 @@ export default function AdminPage() {
           <div className="space-y-6">
             <div>
               <h3 className="text-lg font-medium mb-3">Church Information</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label htmlFor="church_name" className="block text-sm font-medium text-gray-700 mb-1">
-                    Church Name
-                  </label>
-                  <input
-                    id="church_name"
-                    type="text"
-                    className="input-field"
-                    defaultValue="Grace Community Church"
-                  />
+              {loadingSettings ? (
+                <div className="flex justify-center py-4">
+                  <div className="animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-primary"></div>
                 </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label htmlFor="church_name" className="block text-sm font-medium text-gray-700 mb-1">
+                      Church Name
+                    </label>
+                    <input
+                      id="church_name"
+                      type="text"
+                      className="input-field"
+                      value={churchSettings.name}
+                      onChange={(e) => setChurchSettings({...churchSettings, name: e.target.value})}
+                    />
+                  </div>
 
-                <div>
-                  <label htmlFor="church_email" className="block text-sm font-medium text-gray-700 mb-1">
-                    Email
-                  </label>
-                  <input
-                    id="church_email"
-                    type="email"
-                    className="input-field"
-                    defaultValue="info@gracechurch.org"
-                  />
-                </div>
+                  <div>
+                    <label htmlFor="church_email" className="block text-sm font-medium text-gray-700 mb-1">
+                      Email
+                    </label>
+                    <input
+                      id="church_email"
+                      type="email"
+                      className="input-field"
+                      value={churchSettings.email}
+                      onChange={(e) => setChurchSettings({...churchSettings, email: e.target.value})}
+                    />
+                  </div>
 
-                <div>
-                  <label htmlFor="church_phone" className="block text-sm font-medium text-gray-700 mb-1">
-                    Phone
-                  </label>
-                  <input
-                    id="church_phone"
-                    type="tel"
-                    className="input-field"
-                    defaultValue="123-456-7890"
-                  />
-                </div>
+                  <div>
+                    <label htmlFor="church_phone" className="block text-sm font-medium text-gray-700 mb-1">
+                      Phone
+                    </label>
+                    <input
+                      id="church_phone"
+                      type="tel"
+                      className="input-field"
+                      value={churchSettings.phone}
+                      onChange={(e) => setChurchSettings({...churchSettings, phone: e.target.value})}
+                    />
+                  </div>
 
-                <div>
-                  <label htmlFor="church_website" className="block text-sm font-medium text-gray-700 mb-1">
-                    Website
-                  </label>
-                  <input
-                    id="church_website"
-                    type="url"
-                    className="input-field"
-                    defaultValue="https://gracechurch.org"
-                  />
-                </div>
+                  <div>
+                    <label htmlFor="church_website" className="block text-sm font-medium text-gray-700 mb-1">
+                      Website
+                    </label>
+                    <input
+                      id="church_website"
+                      type="url"
+                      className="input-field"
+                      value={churchSettings.website}
+                      onChange={(e) => setChurchSettings({...churchSettings, website: e.target.value})}
+                    />
+                  </div>
 
-                <div className="md:col-span-2">
-                  <label htmlFor="church_address" className="block text-sm font-medium text-gray-700 mb-1">
-                    Address
-                  </label>
-                  <input
-                    id="church_address"
-                    type="text"
-                    className="input-field"
-                    defaultValue="123 Main St, City, State 12345"
-                  />
+                  <div className="md:col-span-2">
+                    <label htmlFor="church_address" className="block text-sm font-medium text-gray-700 mb-1">
+                      Address
+                    </label>
+                    <input
+                      id="church_address"
+                      type="text"
+                      className="input-field"
+                      value={churchSettings.address}
+                      onChange={(e) => setChurchSettings({...churchSettings, address: e.target.value})}
+                    />
+                  </div>
                 </div>
+              )
               </div>
             </div>
 

@@ -79,6 +79,9 @@ export default function MemberDashboard() {
         }
 
         // Get upcoming meetings
+        const today = new Date();
+        const todayStr = today.toISOString().split('T')[0]; // Format as YYYY-MM-DD
+
         const { data: upcomingData, error: upcomingError } = await supabase
           .from('attendance_meetings')
           .select(`
@@ -90,12 +93,22 @@ export default function MemberDashboard() {
             cell_group_id,
             ministry_id
           `)
-          .order('id', { ascending: false })
+          .gte('meeting_date', todayStr) // Only get meetings from today onwards
+          .order('meeting_date', { ascending: true }) // Order by date (soonest first)
           .limit(3);
 
         if (upcomingError) throw upcomingError;
 
-        setUpcomingMeetings(upcomingData || []);
+        // Filter meetings relevant to the user (their cell group or all if admin)
+        let filteredMeetings = upcomingData || [];
+        if (user.role_level < 4 && user.cell_group_id) { // If not admin and has cell group
+          filteredMeetings = filteredMeetings.filter(meeting =>
+            meeting.event_category !== 'cell_group' || // Include non-cell group meetings
+            meeting.cell_group_id === user.cell_group_id // Or only their cell group
+          );
+        }
+
+        setUpcomingMeetings(filteredMeetings);
 
         // Get latest news
         const { data: newsData, error: newsError } = await supabase
