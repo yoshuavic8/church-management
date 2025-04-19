@@ -432,8 +432,8 @@ export default function MemberProfile() {
                       <div>
                         <p className="text-sm text-gray-500">Baptized</p>
                         <p className="text-sm font-medium">
-                          {memberData.is_baptized ? 'Yes' : 'No'}
-                          {memberData.is_baptized && memberData.baptism_date &&
+                          {memberData.baptism_date ? 'Yes' : 'No'}
+                          {memberData.baptism_date &&
                             ` (${new Date(memberData.baptism_date).toLocaleDateString()})`}
                         </p>
                       </div>
