@@ -101,13 +101,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.log('Checking for member login:', memberId ? 'ID exists' : 'No ID', memberEmail ? 'Email exists' : 'No email');
 
       if (memberId && memberEmail) {
-        // Fetch member data
+        // Fetch member data - IMPORTANT: Don't use cached data
         const { data: member, error } = await supabase
           .from('members')
           .select('*')
           .eq('id', memberId)
-          .eq('email', memberEmail)
-          .single();
+          .single()
+          .options({
+            head: false,
+            count: 'exact'
+          });
 
         if (error) {
           console.error('Error fetching member data:', error);
@@ -306,6 +309,37 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
+  // Function to manually update user data
+  const updateUserData = async (userId: string) => {
+    console.log('Manually updating user data for:', userId);
+    try {
+      const { data, error } = await supabase
+        .from('members')
+        .select('*')
+        .eq('id', userId)
+        .single()
+        .options({
+          head: false,
+          count: 'exact'
+        });
+
+      if (error) {
+        console.error('Error fetching updated user data:', error);
+        return false;
+      }
+
+      if (data) {
+        console.log('Updated user data:', data);
+        setUser(data);
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error('Error in updateUserData:', error);
+      return false;
+    }
+  };
+
   const value = {
     user,
     loading,
@@ -316,6 +350,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     loginMemberWithPassword,
     logout,
     refreshUser,
+    updateUserData,
     setUser,
     setIsMember,
   };

@@ -56,14 +56,18 @@ export async function POST(req: NextRequest) {
 
     // Update password in database
     console.log("Updating password in database for member:", memberId);
-    const { error: updateError } = await supabase
+    const updateData = {
+      password_hash: newPasswordHash,
+      password_reset_required: false,
+      last_password_change: new Date().toISOString(),
+    };
+    console.log("Update data:", updateData);
+
+    const { data: updateResult, error: updateError } = await supabase
       .from("members")
-      .update({
-        password_hash: newPasswordHash,
-        password_reset_required: false,
-        last_password_change: new Date().toISOString(),
-      })
-      .eq("id", memberId);
+      .update(updateData)
+      .eq("id", memberId)
+      .select();
 
     if (updateError) {
       console.error("Error updating password:", updateError);
@@ -71,6 +75,13 @@ export async function POST(req: NextRequest) {
         { error: "Failed to update password" },
         { status: 500 }
       );
+    }
+
+    console.log("Update result:", updateResult);
+    if (!updateResult || updateResult.length === 0) {
+      console.warn("No rows were updated");
+    } else {
+      console.log("Updated member data:", updateResult[0]);
     }
 
     return NextResponse.json({
