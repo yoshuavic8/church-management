@@ -21,10 +21,14 @@ type AuthContextType = {
   user: Member | null;
   loading: boolean;
   isAdmin: boolean;
+  isMember: boolean;
   loginAdmin: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
   loginMember: (token: string) => Promise<{ success: boolean; error?: string }>;
+  loginMemberWithPassword: (email: string, password: string) => Promise<{ success: boolean; error?: string; passwordResetRequired?: boolean }>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
+  setUser: (user: Member | null) => void;
+  setIsMember: (isMember: boolean) => void;
 };
 
 // Create the auth context
@@ -35,6 +39,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<Member | null>(null);
   const [loading, setLoading] = useState(true);
   const [isAdminUser, setIsAdminUser] = useState(false);
+  const [isMemberUser, setIsMember] = useState(false);
   const router = useRouter();
   const supabase = getSupabaseClient();
 
@@ -48,11 +53,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Function to refresh user data
   const refreshUser = async () => {
     setLoading(true);
-    
+
     try {
       // First check if user is logged in with Supabase Auth
       const { data: { session } } = await supabase.auth.getSession();
-      
+
       if (session?.user) {
         // User is logged in with Supabase Auth, get their member record
         const { data: member } = await supabase
@@ -60,15 +65,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           .select('*')
           .eq('id', session.user.id)
           .single();
-        
+
         if (member) {
           setUser(member);
-          await checkAdminStatus();
+          const adminStatus = await checkAdminStatus();
+          setIsAdminUser(adminStatus);
+          setIsMember(!adminStatus); // If admin, not a regular member
           setLoading(false);
           return;
         }
       }
-      
+
       // If not logged in with Supabase Auth, check for member token in localStorage
       const memberToken = localStorage.getItem('memberToken');
       if (memberToken) {
@@ -76,6 +83,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (member) {
           setUser(member);
           setIsAdminUser(false); // Member tokens are never admin
+          setIsMember(true);
           setLoading(false);
           return;
         } else {
@@ -83,16 +91,44 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           localStorage.removeItem('memberToken');
         }
       }
-      
+
+      // Check for member email/id in localStorage (password-based login)
+      const memberId = localStorage.getItem('memberId');
+      const memberEmail = localStorage.getItem('memberEmail');
+
+      if (memberId && memberEmail) {
+        // Fetch member data
+        const { data: member } = await supabase
+          .from('members')
+          .select('*')
+          .eq('id', memberId)
+          .eq('email', memberEmail)
+          .single();
+
+        if (member) {
+          setUser(member);
+          setIsAdminUser(false);
+          setIsMember(true);
+          setLoading(false);
+          return;
+        } else {
+          // Invalid member data, clear it
+          localStorage.removeItem('memberId');
+          localStorage.removeItem('memberEmail');
+        }
+      }
+
       // No valid session found
       setUser(null);
       setIsAdminUser(false);
+      setIsMember(false);
     } catch (error) {
-      
+
       setUser(null);
       setIsAdminUser(false);
+      setIsMember(false);
     }
-    
+
     setLoading(false);
   };
 
@@ -103,51 +139,51 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         email,
         password,
       });
-      
+
       if (error) throw error;
-      
+
       if (data.user) {
         // Check if the user is an admin
         const adminStatus = await checkAdminStatus();
-        
+
         if (!adminStatus) {
           // Not an admin, sign out
           await supabase.auth.signOut();
-          return { 
-            success: false, 
-            error: 'You do not have admin privileges.' 
+          return {
+            success: false,
+            error: 'You do not have admin privileges.'
           };
         }
-        
+
         // Get the member record
         const { data: member } = await supabase
           .from('members')
           .select('*')
           .eq('id', data.user.id)
           .single();
-        
+
         if (member) {
           setUser(member);
           return { success: true };
         } else {
           // No member record found
           await supabase.auth.signOut();
-          return { 
-            success: false, 
-            error: 'Admin account not properly set up. Please contact support.' 
+          return {
+            success: false,
+            error: 'Admin account not properly set up. Please contact support.'
           };
         }
       }
-      
-      return { 
-        success: false, 
-        error: 'Login failed. Please try again.' 
+
+      return {
+        success: false,
+        error: 'Login failed. Please try again.'
       };
     } catch (error: any) {
-      
-      return { 
-        success: false, 
-        error: error.message || 'Login failed. Please try again.' 
+
+      return {
+        success: false,
+        error: error.message || 'Login failed. Please try again.'
       };
     }
   };
@@ -156,23 +192,62 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const loginMember = async (token: string) => {
     try {
       const member = await validateMemberToken(token);
-      
+
       if (member) {
         setUser(member);
         setIsAdminUser(false);
+        setIsMember(true);
         localStorage.setItem('memberToken', token);
         return { success: true };
       }
-      
-      return { 
-        success: false, 
-        error: 'Invalid or expired token. Please try again.' 
+
+      return {
+        success: false,
+        error: 'Invalid or expired token. Please try again.'
       };
     } catch (error: any) {
-      
-      return { 
-        success: false, 
-        error: error.message || 'Login failed. Please try again.' 
+
+      return {
+        success: false,
+        error: error.message || 'Login failed. Please try again.'
+      };
+    }
+  };
+
+  // Login as member using password
+  const loginMemberWithPassword = async (email: string, password: string) => {
+    try {
+      const response = await fetch('/api/auth/verify-password', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, password }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Login failed');
+      }
+
+      // Store member data in context
+      setUser(data.member);
+      setIsAdminUser(false);
+      setIsMember(true);
+
+      // Store member info in localStorage
+      localStorage.setItem('memberEmail', email);
+      localStorage.setItem('memberId', data.member.id);
+
+      return {
+        success: true,
+        passwordResetRequired: data.passwordResetRequired
+      };
+    } catch (error: any) {
+      return {
+        success: false,
+        error: error.message || 'Login failed. Please try again.'
       };
     }
   };
@@ -181,14 +256,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const logout = async () => {
     // Clear Supabase Auth session
     await supabase.auth.signOut();
-    
-    // Clear member token
+
+    // Clear member data
     localStorage.removeItem('memberToken');
-    
+    localStorage.removeItem('memberEmail');
+    localStorage.removeItem('memberId');
+
     // Reset state
     setUser(null);
     setIsAdminUser(false);
-    
+    setIsMember(false);
+
     // Redirect to home page
     router.push('/');
   };
@@ -196,7 +274,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Check for existing session on mount
   useEffect(() => {
     refreshUser();
-    
+
     // Set up auth state change listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
@@ -208,7 +286,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       }
     );
-    
+
     return () => {
       subscription.unsubscribe();
     };
@@ -218,10 +296,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     user,
     loading,
     isAdmin: isAdminUser,
+    isMember: isMemberUser,
     loginAdmin,
     loginMember,
+    loginMemberWithPassword,
     logout,
     refreshUser,
+    setUser,
+    setIsMember,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
