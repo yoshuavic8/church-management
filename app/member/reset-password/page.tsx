@@ -40,10 +40,6 @@ export default function ResetPassword() {
     }
 
     try {
-      console.log('Resetting password for member:', user?.id);
-      console.log('Current password length:', currentPassword.length);
-      console.log('New password length:', newPassword.length);
-
       // Use the regular endpoint
       const response = await fetch('/api/auth/reset-password', {
         method: 'POST',
@@ -58,10 +54,8 @@ export default function ResetPassword() {
       });
 
       const data = await response.json();
-      console.log('Reset password response:', data);
 
       if (!response.ok) {
-        console.error('Reset password failed:', data.error);
         throw new Error(data.error || 'Failed to reset password');
       }
 
@@ -69,8 +63,6 @@ export default function ResetPassword() {
 
       // Update the user context to reflect the password change
       if (user) {
-        console.log('Updating user data after password reset');
-
         // Update password_reset_required flag in client state
         await updatePasswordResetFlag(user.id);
 
@@ -84,7 +76,7 @@ export default function ResetPassword() {
         // Update user object in localStorage to reflect password_reset_required=false
         const updatedUser = { ...user, password_reset_required: false };
         localStorage.setItem('memberData', JSON.stringify(updatedUser));
-        console.log('Updated user data in localStorage');
+
       }
 
       // Redirect to dashboard after 3 seconds

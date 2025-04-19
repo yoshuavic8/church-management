@@ -84,21 +84,30 @@ export default function MemberCellGroup() {
           meeting_date,
           meeting_type,
           topic,
-          is_realtime,
-          attendance_participants (
-            status
-          )
+          is_realtime
         `)
         .eq('cell_group_id', memberData.cell_group_id)
         .eq('event_category', 'cell_group')
         .order('id', { ascending: false });
 
+      // Fetch attendance participants separately
+      const { data: participantsData, error: participantsError } = await supabase
+        .from('attendance_participants')
+        .select('meeting_id, status');
+
+      if (participantsError) throw participantsError;
+
       if (meetingsError) throw meetingsError;
 
       // Process meetings data
       const processedMeetings = meetingsData.map((meeting: any) => {
-        const totalAttendees = meeting.attendance_participants.length;
-        const presentAttendees = meeting.attendance_participants.filter(
+        // Filter participants for this meeting
+        const meetingParticipants = participantsData.filter(
+          (p: any) => p.meeting_id === meeting.id
+        );
+
+        const totalAttendees = meetingParticipants.length;
+        const presentAttendees = meetingParticipants.filter(
           (p: any) => p.status === 'present' || p.status === 'late'
         ).length;
 

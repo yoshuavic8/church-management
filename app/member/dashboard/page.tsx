@@ -87,8 +87,8 @@ export default function MemberDashboard() {
             meeting_type,
             topic,
             event_category,
-            cell_group:cell_group_id (name),
-            ministry:ministry_id (name)
+            cell_group_id,
+            ministry_id
           `)
           .order('id', { ascending: false })
           .limit(3);
@@ -122,10 +122,11 @@ export default function MemberDashboard() {
   }, [user]);
 
   const getContextName = (meeting: any) => {
-    if (meeting.event_category === 'cell_group' && meeting.cell_group) {
-      return meeting.cell_group.name;
-    } else if (meeting.event_category === 'ministry' && meeting.ministry) {
-      return meeting.ministry.name;
+    // Since we're not fetching related data anymore, just return a formatted category name
+    if (meeting.event_category === 'cell_group') {
+      return 'Cell Group Meeting';
+    } else if (meeting.event_category === 'ministry') {
+      return 'Ministry Meeting';
     } else {
       return meeting.event_category.replace('_', ' ');
     }

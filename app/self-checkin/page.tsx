@@ -67,8 +67,8 @@ function SelfCheckinContent() {
           topic,
           event_category,
           is_realtime,
-          cell_group:cell_group_id(name),
-          ministry:ministry_id(name)
+          cell_group_id,
+          ministry_id
         `)
         .eq('id', id)
         .single();
@@ -223,10 +223,10 @@ function SelfCheckinContent() {
   const getContextName = () => {
     if (!meeting) return '';
 
-    if (meeting.event_category === 'cell_group' && meeting.cell_group) {
-      return meeting.cell_group.name;
-    } else if (meeting.event_category === 'ministry' && meeting.ministry) {
-      return meeting.ministry.name;
+    if (meeting.event_category === 'cell_group') {
+      return 'Cell Group Meeting';
+    } else if (meeting.event_category === 'ministry') {
+      return 'Ministry Meeting';
     } else {
       return meeting.event_category.replace('_', ' ');
     }

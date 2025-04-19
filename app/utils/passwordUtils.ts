@@ -8,12 +8,7 @@ import bcrypt from "bcryptjs";
 export async function hashPassword(password: string): Promise<string> {
   const saltRounds = 10;
   try {
-    console.log("Hashing password, length:", password.length);
     const hashedPassword = await bcrypt.hash(password, saltRounds);
-    console.log(
-      "Password hashed successfully, hash length:",
-      hashedPassword.length
-    );
     return hashedPassword;
   } catch (error) {
     console.error("Error hashing password:", error);

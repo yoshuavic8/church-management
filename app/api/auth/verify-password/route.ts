@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseClient } from "../../../lib/supabase";
 import { verifyPassword } from "../../../utils/passwordUtils";
+import bcrypt from "bcryptjs";
 
 export async function POST(req: NextRequest) {
   try {
@@ -32,7 +33,6 @@ export async function POST(req: NextRequest) {
 
     // If password_hash is not set, return error
     if (!member.password_hash) {
-      console.log("Password not set for member:", member.id);
       return NextResponse.json(
         {
           error: "Password not set for this account",
@@ -45,26 +45,9 @@ export async function POST(req: NextRequest) {
     }
 
     // Verify password
-    console.log("Verifying password for member:", member.id);
-    console.log("Password hash in database:", member.password_hash);
-    console.log("Password to verify (length):", password.length);
-
-    // Try direct comparison first for debugging
-    try {
-      const directCompare = await bcrypt.compare(
-        password,
-        member.password_hash
-      );
-      console.log("Direct bcrypt compare result:", directCompare);
-    } catch (compareError) {
-      console.error("Error in direct bcrypt compare:", compareError);
-    }
-
     const isValid = await verifyPassword(password, member.password_hash);
-    console.log("Password verification result:", isValid);
 
     if (!isValid) {
-      console.log("Password verification failed");
       return NextResponse.json(
         { error: "Invalid credentials" },
         { status: 401 }
