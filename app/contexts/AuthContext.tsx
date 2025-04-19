@@ -98,19 +98,36 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Check for member email/id in localStorage (password-based login)
       const memberId = localStorage.getItem('memberId');
       const memberEmail = localStorage.getItem('memberEmail');
-      console.log('Checking for member login:', memberId ? 'ID exists' : 'No ID', memberEmail ? 'Email exists' : 'No email');
+      const memberDataStr = localStorage.getItem('memberData');
+      console.log('Checking for member login:', memberId ? 'ID exists' : 'No ID', memberEmail ? 'Email exists' : 'No email', memberDataStr ? 'Data exists' : 'No data');
 
       if (memberId && memberEmail) {
-        // Fetch member data - IMPORTANT: Don't use cached data
+        // First try to use memberData from localStorage if available
+        if (memberDataStr) {
+          try {
+            const memberData = JSON.parse(memberDataStr);
+            console.log('Using member data from localStorage:', memberData.id);
+
+            if (memberData && memberData.id === memberId) {
+              setUser(memberData);
+              setIsAdminUser(false);
+              setIsMember(true);
+              setLoading(false);
+              console.log('Member data loaded from localStorage, password reset required:', memberData.password_reset_required === true);
+              return;
+            }
+          } catch (parseError) {
+            console.error('Error parsing member data from localStorage:', parseError);
+          }
+        }
+
+        // If no valid data in localStorage, fetch from database
+        console.log('Fetching member data from database');
         const { data: member, error } = await supabase
           .from('members')
           .select('*')
           .eq('id', memberId)
-          .single()
-          .options({
-            head: false,
-            count: 'exact'
-          });
+          .single();
 
         if (error) {
           console.error('Error fetching member data:', error);
@@ -256,6 +273,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Store member info in localStorage
       localStorage.setItem('memberEmail', email);
       localStorage.setItem('memberId', data.member.id);
+      localStorage.setItem('memberData', JSON.stringify(data.member));
 
       return {
         success: true,
@@ -309,19 +327,35 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
+  // Function to update password_reset_required flag
+  const updatePasswordResetFlag = async (userId: string) => {
+    console.log('Updating password_reset_required flag for:', userId);
+    try {
+      // Update user object in state
+      if (user && user.id === userId) {
+        const updatedUser = { ...user, password_reset_required: false };
+        setUser(updatedUser);
+        console.log('Updated user state with password_reset_required=false');
+      }
+      return true;
+    } catch (error) {
+      console.error('Error in updatePasswordResetFlag:', error);
+      return false;
+    }
+  };
+
   // Function to manually update user data
   const updateUserData = async (userId: string) => {
     console.log('Manually updating user data for:', userId);
     try {
+      // Force cache refresh by adding a timestamp parameter
+      const timestamp = new Date().getTime();
+
       const { data, error } = await supabase
         .from('members')
         .select('*')
         .eq('id', userId)
-        .single()
-        .options({
-          head: false,
-          count: 'exact'
-        });
+        .single();
 
       if (error) {
         console.error('Error fetching updated user data:', error);
@@ -351,6 +385,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     logout,
     refreshUser,
     updateUserData,
+    updatePasswordResetFlag,
     setUser,
     setIsMember,
   };

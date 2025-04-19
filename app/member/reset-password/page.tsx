@@ -12,7 +12,7 @@ export default function ResetPassword() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const router = useRouter();
-  const { user, refreshUser, updateUserData } = useAuth();
+  const { user, refreshUser, updateUserData, updatePasswordResetFlag } = useAuth();
 
   useEffect(() => {
     // Redirect if not logged in
@@ -70,7 +70,10 @@ export default function ResetPassword() {
       if (user) {
         console.log('Updating user data after password reset');
 
-        // Explicitly update password_reset_required flag
+        // Update password_reset_required flag in client state
+        await updatePasswordResetFlag(user.id);
+
+        // Explicitly update password_reset_required flag in database
         try {
           const flagResponse = await fetch('/api/auth/update-password-flag', {
             method: 'POST',
@@ -99,6 +102,13 @@ export default function ResetPassword() {
         localStorage.setItem('memberEmail', user.email);
         localStorage.setItem('memberId', user.id);
         console.log('Updated localStorage with user data');
+
+        // Update user object in localStorage to reflect password_reset_required=false
+        if (user) {
+          const updatedUser = { ...user, password_reset_required: false };
+          localStorage.setItem('memberData', JSON.stringify(updatedUser));
+          console.log('Updated localStorage with password_reset_required=false');
+        }
       }
 
       // Redirect to dashboard after 3 seconds
