@@ -53,10 +53,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Function to refresh user data
   const refreshUser = async () => {
     setLoading(true);
+    console.log('Refreshing user data');
 
     try {
       // First check if user is logged in with Supabase Auth
       const { data: { session } } = await supabase.auth.getSession();
+      console.log('Supabase session:', session ? 'exists' : 'none');
 
       if (session?.user) {
         // User is logged in with Supabase Auth, get their member record
@@ -67,6 +69,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           .single();
 
         if (member) {
+          console.log('Found member record for admin user:', member.id);
           setUser(member);
           const adminStatus = await checkAdminStatus();
           setIsAdminUser(adminStatus);
@@ -95,23 +98,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Check for member email/id in localStorage (password-based login)
       const memberId = localStorage.getItem('memberId');
       const memberEmail = localStorage.getItem('memberEmail');
+      console.log('Checking for member login:', memberId ? 'ID exists' : 'No ID', memberEmail ? 'Email exists' : 'No email');
 
       if (memberId && memberEmail) {
         // Fetch member data
-        const { data: member } = await supabase
+        const { data: member, error } = await supabase
           .from('members')
           .select('*')
           .eq('id', memberId)
           .eq('email', memberEmail)
           .single();
 
+        if (error) {
+          console.error('Error fetching member data:', error);
+        }
+
         if (member) {
+          console.log('Found member record for password login:', member.id, 'Password reset required:', member.password_reset_required);
           setUser(member);
           setIsAdminUser(false);
           setIsMember(true);
           setLoading(false);
           return;
         } else {
+          console.log('No member found with stored ID/email');
           // Invalid member data, clear it
           localStorage.removeItem('memberId');
           localStorage.removeItem('memberEmail');
@@ -217,6 +227,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Login as member using password
   const loginMemberWithPassword = async (email: string, password: string) => {
     try {
+      console.log('Attempting to login with email:', email);
+
       const response = await fetch('/api/auth/verify-password', {
         method: 'POST',
         headers: {
@@ -226,8 +238,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       });
 
       const data = await response.json();
+      console.log('Verify password response:', data);
 
       if (!response.ok) {
+        console.error('Login failed:', data.error);
         throw new Error(data.error || 'Login failed');
       }
 

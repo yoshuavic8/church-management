@@ -7,7 +7,18 @@ import bcrypt from "bcryptjs";
  */
 export async function hashPassword(password: string): Promise<string> {
   const saltRounds = 10;
-  return bcrypt.hash(password, saltRounds);
+  try {
+    console.log("Hashing password, length:", password.length);
+    const hashedPassword = await bcrypt.hash(password, saltRounds);
+    console.log(
+      "Password hashed successfully, hash length:",
+      hashedPassword.length
+    );
+    return hashedPassword;
+  } catch (error) {
+    console.error("Error hashing password:", error);
+    throw error;
+  }
 }
 
 /**
@@ -20,7 +31,17 @@ export async function verifyPassword(
   password: string,
   hash: string
 ): Promise<boolean> {
-  return bcrypt.compare(password, hash);
+  if (!hash) {
+    console.error("Hash is empty or undefined");
+    return false;
+  }
+
+  try {
+    return await bcrypt.compare(password, hash);
+  } catch (error) {
+    console.error("Error comparing passwords:", error);
+    return false;
+  }
 }
 
 /**

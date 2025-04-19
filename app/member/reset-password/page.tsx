@@ -12,7 +12,7 @@ export default function ResetPassword() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, refreshUser } = useAuth();
 
   useEffect(() => {
     // Redirect if not logged in
@@ -40,6 +40,10 @@ export default function ResetPassword() {
     }
 
     try {
+      console.log('Resetting password for member:', user?.id);
+      console.log('Current password length:', currentPassword.length);
+      console.log('New password length:', newPassword.length);
+
       const response = await fetch('/api/auth/reset-password', {
         method: 'POST',
         headers: {
@@ -53,12 +57,17 @@ export default function ResetPassword() {
       });
 
       const data = await response.json();
+      console.log('Reset password response:', data);
 
       if (!response.ok) {
+        console.error('Reset password failed:', data.error);
         throw new Error(data.error || 'Failed to reset password');
       }
 
       setSuccess(true);
+
+      // Update the user context to reflect the password change
+      await refreshUser();
 
       // Redirect to dashboard after 3 seconds
       setTimeout(() => {
