@@ -3,9 +3,9 @@ import { getSupabaseClient } from "../../../lib/supabase";
 
 export async function GET(req: NextRequest) {
   try {
-    const url = new URL(req.url);
-    const memberId = url.searchParams.get("memberId");
-    
+    // Use searchParams directly from the request
+    const memberId = req.nextUrl.searchParams.get("memberId");
+
     console.log("Verifying password set for member ID:", memberId);
 
     if (!memberId) {
