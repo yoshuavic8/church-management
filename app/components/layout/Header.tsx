@@ -13,7 +13,7 @@ interface HeaderProps {
 const Header = ({ sidebarOpen, setSidebarOpen }: HeaderProps) => {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
-  const { user, signOut } = useAuth();
+  const { user, logout } = useAuth();
   const pathname = usePathname();
 
   // Check if dark mode is enabled on component mount
@@ -42,7 +42,7 @@ const Header = ({ sidebarOpen, setSidebarOpen }: HeaderProps) => {
 
   // Handle sign out
   const handleSignOut = async () => {
-    await signOut();
+    await logout();
   };
 
   // Determine if we should show the quick scan link
