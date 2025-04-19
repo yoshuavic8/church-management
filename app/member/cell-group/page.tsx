@@ -23,29 +23,29 @@ export default function MemberCellGroup() {
     try {
       setLoading(true);
       const supabase = getSupabaseClient();
-      
+
       // Get current user
       const { data: { user } } = await supabase.auth.getUser();
-      
+
       if (!user) {
         throw new Error('User not authenticated');
       }
-      
+
       // Get member's cell group
       const { data: memberData, error: memberError } = await supabase
         .from('members')
         .select('cell_group_id')
         .eq('id', user.id)
         .single();
-        
+
       if (memberError) throw memberError;
-      
+
       if (!memberData.cell_group_id) {
         // Member is not assigned to any cell group
         setLoading(false);
         return;
       }
-      
+
       // Get cell group details
       const { data: cellGroupData, error: cellGroupError } = await supabase
         .from('cell_groups')
@@ -56,27 +56,27 @@ export default function MemberCellGroup() {
         `)
         .eq('id', memberData.cell_group_id)
         .single();
-        
+
       if (cellGroupError) throw cellGroupError;
-      
+
       setCellGroup(cellGroupData);
-      
+
       // Get cell group members
       const { data: membersData, error: membersError } = await supabase
         .from('members')
         .select('id, first_name, last_name, status, role')
         .eq('cell_group_id', memberData.cell_group_id)
         .order('first_name', { ascending: true });
-        
+
       if (membersError) throw membersError;
-      
+
       setMembers(membersData || []);
-      
+
       // Get recent and upcoming meetings
       const today = new Date();
       const threeMonthsAgo = new Date();
       threeMonthsAgo.setMonth(today.getMonth() - 3);
-      
+
       const { data: meetingsData, error: meetingsError } = await supabase
         .from('attendance_meetings')
         .select(`
@@ -91,18 +91,17 @@ export default function MemberCellGroup() {
         `)
         .eq('cell_group_id', memberData.cell_group_id)
         .eq('event_category', 'cell_group')
-        .gte('meeting_date', threeMonthsAgo.toISOString())
-        .order('meeting_date', { ascending: false });
-        
+        .order('id', { ascending: false });
+
       if (meetingsError) throw meetingsError;
-      
+
       // Process meetings data
       const processedMeetings = meetingsData.map((meeting: any) => {
         const totalAttendees = meeting.attendance_participants.length;
         const presentAttendees = meeting.attendance_participants.filter(
           (p: any) => p.status === 'present' || p.status === 'late'
         ).length;
-        
+
         return {
           ...meeting,
           totalAttendees,
@@ -111,27 +110,27 @@ export default function MemberCellGroup() {
           isPast: new Date(meeting.meeting_date) < today
         };
       });
-      
+
       setMeetings(processedMeetings || []);
-      
+
       // Calculate statistics
       const pastMeetings = processedMeetings.filter(m => m.isPast);
       const upcomingMeetings = processedMeetings.filter(m => !m.isPast);
-      
+
       const totalAttendanceRates = pastMeetings.reduce((sum, meeting) => sum + meeting.attendanceRate, 0);
-      const averageAttendance = pastMeetings.length > 0 
-        ? Math.round(totalAttendanceRates / pastMeetings.length) 
+      const averageAttendance = pastMeetings.length > 0
+        ? Math.round(totalAttendanceRates / pastMeetings.length)
         : 0;
-      
+
       setStats({
         totalMembers: membersData.length,
         totalMeetings: pastMeetings.length,
         averageAttendance,
         upcomingMeetings: upcomingMeetings.length
       });
-      
+
     } catch (error) {
-      
+
     } finally {
       setLoading(false);
     }
@@ -188,8 +187,8 @@ export default function MemberCellGroup() {
             <span className="font-medium">District:</span> {cellGroup.district?.name || 'None'}
           </div>
           <div className="mr-6">
-            <span className="font-medium">Leader:</span> {cellGroup.leader 
-              ? `${cellGroup.leader.first_name} ${cellGroup.leader.last_name}` 
+            <span className="font-medium">Leader:</span> {cellGroup.leader
+              ? `${cellGroup.leader.first_name} ${cellGroup.leader.last_name}`
               : 'Not assigned'}
           </div>
           <div>
@@ -240,7 +239,7 @@ export default function MemberCellGroup() {
                 </div>
               </div>
             ))}
-            
+
             {members.length === 0 && (
               <p className="text-sm text-gray-500 text-center py-4">No members found</p>
             )}
@@ -253,11 +252,11 @@ export default function MemberCellGroup() {
           <div className="space-y-4">
             {meetings.length > 0 ? (
               meetings.map((meeting) => (
-                <div 
-                  key={meeting.id} 
+                <div
+                  key={meeting.id}
                   className={`border-l-4 ${
-                    meeting.isPast 
-                      ? 'border-gray-300' 
+                    meeting.isPast
+                      ? 'border-gray-300'
                       : 'border-primary'
                   } pl-4 py-2`}
                 >

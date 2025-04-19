@@ -18,10 +18,10 @@ export default function MemberLayout({
     const fetchUserProfile = async () => {
       try {
         const supabase = getSupabaseClient();
-        
+
         // Get current user
         const { data: { user } } = await supabase.auth.getUser();
-        
+
         if (user) {
           // Get user profile
           const { data, error } = await supabase
@@ -29,18 +29,18 @@ export default function MemberLayout({
             .select('first_name, last_name')
             .eq('id', user.id)
             .single();
-            
+
           if (data) {
             setUserName(`${data.first_name} ${data.last_name}`);
           }
         }
       } catch (error) {
-        
+
       } finally {
         setLoading(false);
       }
     };
-    
+
     fetchUserProfile();
   }, []);
 
@@ -65,14 +65,13 @@ export default function MemberLayout({
               <span className="text-sm text-gray-500 mr-4">
                 {loading ? 'Loading...' : `Welcome, ${userName}`}
               </span>
-              <form action="/auth/signout" method="post">
+              <Link href="/auth/logout">
                 <button
-                  type="submit"
                   className="inline-flex items-center px-3 py-1.5 border border-transparent text-sm font-medium rounded-md text-white bg-primary hover:bg-primary-dark"
                 >
                   Sign Out
                 </button>
-              </form>
+              </Link>
             </div>
           </div>
         </div>

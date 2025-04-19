@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import Layout from '@/app/components/layout/Layout';
 import { useAuth } from '@/app/contexts/AuthContext';
 
 export default function ResetPassword() {
@@ -77,9 +76,8 @@ export default function ResetPassword() {
   }
 
   return (
-    <Layout>
-      <div className="max-w-md mx-auto">
-        <h1 className="text-2xl font-semibold mb-6">Change Password</h1>
+    <div className="max-w-md mx-auto">
+      <h1 className="text-2xl font-semibold mb-6">Change Password</h1>
 
         {success ? (
           <div className="bg-green-50 dark:bg-green-900/30 border border-green-200 dark:border-green-800 text-green-700 dark:text-green-400 px-4 py-3 rounded mb-4">
@@ -158,6 +156,6 @@ export default function ResetPassword() {
           </>
         )}
       </div>
-    </Layout>
+    </div>
   );
 }

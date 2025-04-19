@@ -60,8 +60,7 @@ export default function MemberDashboard() {
             )
           `)
           .eq('member_id', user.id)
-          .gte('meeting.meeting_date', threeMonthsAgo.toISOString())
-          .lte('meeting.meeting_date', today.toISOString());
+          .order('id', { ascending: false });
 
         if (attendanceError) throw attendanceError;
 
@@ -91,8 +90,7 @@ export default function MemberDashboard() {
             cell_group:cell_group_id (name),
             ministry:ministry_id (name)
           `)
-          .gte('meeting_date', today.toISOString())
-          .order('meeting_date', { ascending: true })
+          .order('id', { ascending: false })
           .limit(3);
 
         if (upcomingError) throw upcomingError;
@@ -112,7 +110,7 @@ export default function MemberDashboard() {
         setLatestNews(newsData || []);
 
       } catch (error) {
-        
+
       } finally {
         setLoading(false);
       }

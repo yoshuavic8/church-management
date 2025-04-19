@@ -26,18 +26,18 @@ export default function MemberAttendance() {
     try {
       setLoading(true);
       const supabase = getSupabaseClient();
-      
+
       // Get current user
       const { data: { user } } = await supabase.auth.getUser();
-      
+
       if (!user) {
         throw new Error('User not authenticated');
       }
-      
+
       // Calculate date range based on filter
       const today = new Date();
       let startDate = new Date();
-      
+
       if (timeFilter === 'month') {
         startDate.setMonth(today.getMonth() - 1);
       } else if (timeFilter === 'quarter') {
@@ -48,7 +48,7 @@ export default function MemberAttendance() {
         // All time - set to a far past date
         startDate = new Date(2000, 0, 1);
       }
-      
+
       // Fetch attendance records
       const { data, error } = await supabase
         .from('attendance_participants')
@@ -66,14 +66,18 @@ export default function MemberAttendance() {
           )
         `)
         .eq('member_id', user.id)
-        .gte('meeting.meeting_date', startDate.toISOString())
-        .lte('meeting.meeting_date', today.toISOString())
-        .order('meeting.meeting_date', { ascending: false });
-        
+        .order('id', { ascending: false });
+
       if (error) throw error;
-      
+
+      // Filter records by date
+      const filteredData = data.filter((record: any) => {
+        const meetingDate = new Date(record.meeting.meeting_date);
+        return meetingDate >= startDate && meetingDate <= today;
+      });
+
       // Process records
-      const processedRecords = data.map((record: any) => ({
+      const processedRecords = filteredData.map((record: any) => ({
         id: record.id,
         meeting_id: record.meeting.id,
         meeting_date: record.meeting.meeting_date,
@@ -83,16 +87,16 @@ export default function MemberAttendance() {
         context_name: getContextName(record.meeting),
         status: record.status
       }));
-      
+
       setRecords(processedRecords);
-      
+
       // Calculate statistics
       const total = processedRecords.length;
       const present = processedRecords.filter(r => r.status === 'present').length;
       const absent = processedRecords.filter(r => r.status === 'absent').length;
       const late = processedRecords.filter(r => r.status === 'late').length;
       const percentage = total > 0 ? Math.round((present / total) * 100) : 0;
-      
+
       setStats({
         total,
         present,
@@ -100,9 +104,9 @@ export default function MemberAttendance() {
         late,
         percentage
       });
-      
+
     } catch (error) {
-      
+
     } finally {
       setLoading(false);
     }
@@ -153,7 +157,7 @@ export default function MemberAttendance() {
     <div className="space-y-6">
       <div className="bg-white shadow rounded-lg p-6">
         <h2 className="text-xl font-semibold text-gray-900 mb-4">Your Attendance History</h2>
-        
+
         {/* Statistics */}
         <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
           <div className="bg-gray-50 p-4 rounded-lg text-center">
@@ -186,7 +190,7 @@ export default function MemberAttendance() {
             <p className="text-2xl font-bold text-blue-700">{stats.percentage}%</p>
           </div>
         </div>
-        
+
         {/* Time Filter */}
         <div className="mb-6">
           <h3 className="text-sm font-medium text-gray-700 mb-2">Time Period</h3>
@@ -217,7 +221,7 @@ export default function MemberAttendance() {
             </button>
           </div>
         </div>
-        
+
         {/* Attendance Records */}
         {loading ? (
           <div className="flex justify-center items-center h-64">
@@ -273,7 +277,7 @@ export default function MemberAttendance() {
                 )}
               </tbody>
             </table>
-            
+
             {/* Pagination */}
             {records.length > 0 && (
               <div className="mt-6 flex flex-col sm:flex-row justify-between items-center border-t border-gray-200 pt-4">
@@ -286,7 +290,7 @@ export default function MemberAttendance() {
                     of <span className="font-medium">{records.length}</span> results
                   </span>
                 </div>
-                
+
                 <div className="flex items-center space-x-2">
                   <select
                     className="input-field py-1 px-2 text-sm"
@@ -301,7 +305,7 @@ export default function MemberAttendance() {
                     <option value="25">25 per page</option>
                     <option value="50">50 per page</option>
                   </select>
-                  
+
                   <nav className="flex items-center">
                     <button
                       onClick={() => paginate(Math.max(1, currentPage - 1))}
@@ -314,11 +318,11 @@ export default function MemberAttendance() {
                     >
                       &laquo; Prev
                     </button>
-                    
+
                     <span className="px-3 py-1">
                       Page {currentPage} of {totalPages}
                     </span>
-                    
+
                     <button
                       onClick={() => paginate(Math.min(totalPages, currentPage + 1))}
                       disabled={currentPage === totalPages}
@@ -337,7 +341,7 @@ export default function MemberAttendance() {
           </div>
         )}
       </div>
-      
+
       {/* Quick Check-in Card */}
       <div className="bg-white shadow rounded-lg p-6">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between">
@@ -347,8 +351,8 @@ export default function MemberAttendance() {
               Use our self check-in feature to quickly record your attendance
             </p>
           </div>
-          <Link 
-            href="/self-checkin" 
+          <Link
+            href="/self-checkin"
             className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="-ml-1 mr-2 h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
