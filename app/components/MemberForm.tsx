@@ -44,7 +44,7 @@ export default function MemberForm({ initialData = {}, mode }: MemberFormProps) 
     emergency_contact_phone: initialData.emergency_contact_phone || '',
     notes: initialData.notes || '',
     status: initialData.status || 'active',
-    is_baptized: initialData.baptism_date ? 'yes' : 'no', // Track baptism status
+    is_baptized: initialData.is_baptized === true || initialData.baptism_date ? 'yes' : 'no', // Track baptism status
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -79,8 +79,11 @@ export default function MemberForm({ initialData = {}, mode }: MemberFormProps) 
     try {
       const supabase = getSupabaseClient();
 
-      // Create a copy of formData without the is_baptized field
+      // Create a copy of formData and convert is_baptized string to boolean
       const { is_baptized, ...dataToSubmit } = formData;
+
+      // Add is_baptized as boolean
+      dataToSubmit.is_baptized = is_baptized === 'yes';
 
       // If not baptized, ensure baptism_date is null
       if (is_baptized === 'no') {
