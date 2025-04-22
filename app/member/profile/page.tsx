@@ -173,14 +173,7 @@ export default function MemberProfile() {
                         <p className="text-sm text-gray-500">Member Status</p>
                         <p className="text-sm font-medium capitalize">{memberData.status || '-'}</p>
                       </div>
-                      <div>
-                        <p className="text-sm text-gray-500">Baptized</p>
-                        <p className="text-sm font-medium">
-                          {memberData.baptism_date ? 'Yes' : 'No'}
-                          {memberData.baptism_date &&
-                            ` (${new Date(memberData.baptism_date).toLocaleDateString()})`}
-                        </p>
-                      </div>
+
                     </div>
                   </div>
                 </div>

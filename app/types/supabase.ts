@@ -21,7 +21,6 @@ export interface Database {
           gender: string | null;
           marital_status: string | null;
           join_date: string;
-          baptism_date: string | null;
           emergency_contact_name: string | null;
           emergency_contact_phone: string | null;
           notes: string | null;
@@ -45,7 +44,6 @@ export interface Database {
           gender?: string | null;
           marital_status?: string | null;
           join_date?: string;
-          baptism_date?: string | null;
           emergency_contact_name?: string | null;
           emergency_contact_phone?: string | null;
           notes?: string | null;
@@ -69,7 +67,6 @@ export interface Database {
           gender?: string | null;
           marital_status?: string | null;
           join_date?: string;
-          baptism_date?: string | null;
           emergency_contact_name?: string | null;
           emergency_contact_phone?: string | null;
           notes?: string | null;

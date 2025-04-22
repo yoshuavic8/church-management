@@ -20,7 +20,6 @@ type Member = {
   gender: string;
   marital_status: string;
   join_date: string;
-  baptism_date: string;
   emergency_contact_name: string;
   emergency_contact_phone: string;
   notes: string;
@@ -237,20 +236,7 @@ export default function MemberDetailPage() {
                 <p className="mt-1">{formatDate(member.join_date)}</p>
               </div>
 
-              <div>
-                <h3 className="text-sm font-medium text-gray-500">Baptism Status</h3>
-                <p className="mt-1">
-                  {member.baptism_date ? (
-                    <span className="px-2 py-1 rounded-full text-xs bg-green-100 text-green-800">
-                      Baptized on {formatDate(member.baptism_date)}
-                    </span>
-                  ) : (
-                    <span className="px-2 py-1 rounded-full text-xs bg-yellow-100 text-yellow-800">
-                      Not Baptized
-                    </span>
-                  )}
-                </p>
-              </div>
+
 
               <div>
                 <h3 className="text-sm font-medium text-gray-500">Status</h3>

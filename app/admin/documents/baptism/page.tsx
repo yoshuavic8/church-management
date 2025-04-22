@@ -8,7 +8,6 @@ type Member = {
   id: string;
   first_name: string;
   last_name: string;
-  baptism_date: string;
 };
 
 export default function BaptismCertificatePage() {
@@ -28,7 +27,7 @@ export default function BaptismCertificatePage() {
         // const supabase = getSupabaseClient();
         // const { data, error } = await supabase
         //   .from('members')
-        //   .select('id, first_name, last_name, baptism_date')
+        //   .select('id, first_name, last_name')
         //   .order('last_name', { ascending: true });
 
         // if (error) throw error;
@@ -39,25 +38,25 @@ export default function BaptismCertificatePage() {
             id: '1',
             first_name: 'John',
             last_name: 'Doe',
-            baptism_date: '2010-03-22',
+
           },
           {
             id: '2',
             first_name: 'Jane',
             last_name: 'Smith',
-            baptism_date: '2015-06-15',
+
           },
           {
             id: '3',
             first_name: 'Michael',
             last_name: 'Johnson',
-            baptism_date: '2022-11-05',
+
           },
         ];
 
         setMembers(mockMembers);
       } catch (error) {
-        
+
       } finally {
         setLoading(false);
       }
@@ -72,9 +71,7 @@ export default function BaptismCertificatePage() {
 
     if (memberId) {
       const member = members.find(m => m.id === memberId);
-      if (member && member.baptism_date) {
-        setBaptismDate(member.baptism_date);
-      }
+      // Set baptism date manually
     }
   };
 
@@ -102,7 +99,7 @@ export default function BaptismCertificatePage() {
       //     generated_by: 'current_user_id',
       //     generated_date: new Date().toISOString(),
       //     data: {
-      //       baptism_date: baptismDate,
+
       //       officiant: officiant
       //     }
       //   });
@@ -115,7 +112,7 @@ export default function BaptismCertificatePage() {
       alert('Baptism certificate generated successfully!');
       router.push('/admin');
     } catch (error) {
-      
+
       alert('Failed to generate certificate');
     } finally {
       setGenerating(false);
@@ -149,11 +146,11 @@ export default function BaptismCertificatePage() {
           </div>
 
           <div>
-            <label htmlFor="baptism_date" className="block text-sm font-medium text-gray-700 mb-1">
-              Baptism Date *
+            <label htmlFor="certificate_date" className="block text-sm font-medium text-gray-700 mb-1">
+              Certificate Date *
             </label>
             <input
-              id="baptism_date"
+              id="certificate_date"
               type="date"
               value={baptismDate}
               onChange={(e) => setBaptismDate(e.target.value)}

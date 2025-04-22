@@ -104,9 +104,7 @@ export default function AdminPageClient() {
       // to simulate recent baptism certificates
       const { data, error } = await supabase
         .from('members')
-        .select('id, first_name, last_name, baptism_date, is_baptized')
-        .eq('is_baptized', true)
-        .order('baptism_date', { ascending: false })
+        .select('id, first_name, last_name')
         .limit(3);
 
       if (error) throw error;
@@ -117,7 +115,7 @@ export default function AdminPageClient() {
         type: 'Baptism Certificate',
         member_name: `${member.first_name} ${member.last_name}`,
         generated_by: 'System Administrator',
-        generated_date: member.baptism_date,
+        generated_date: new Date().toISOString(),
       })) || [];
 
       setRecentDocuments(documents);

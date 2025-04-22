@@ -17,7 +17,6 @@ type MemberFormProps = {
     gender?: string;
     marital_status?: string;
     join_date?: string;
-    baptism_date?: string;
     emergency_contact_name?: string;
     emergency_contact_phone?: string;
     notes?: string;
