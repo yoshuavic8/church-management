@@ -39,12 +39,10 @@ export default function MemberForm({ initialData = {}, mode }: MemberFormProps) 
     gender: initialData.gender || '',
     marital_status: initialData.marital_status || '',
     join_date: initialData.join_date || new Date().toISOString().split('T')[0],
-    baptism_date: initialData.baptism_date || '',
     emergency_contact_name: initialData.emergency_contact_name || '',
     emergency_contact_phone: initialData.emergency_contact_phone || '',
     notes: initialData.notes || '',
-    status: initialData.status || 'active',
-    is_baptized: initialData.is_baptized === true || initialData.baptism_date ? 'yes' : 'no', // Track baptism status
+    status: initialData.status || 'active'
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -53,22 +51,7 @@ export default function MemberForm({ initialData = {}, mode }: MemberFormProps) 
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-
-    // Special handling for baptism status
-    if (name === 'is_baptized') {
-      if (value === 'no') {
-        // If not baptized, clear baptism date
-        setFormData(prev => ({
-          ...prev,
-          [name]: value,
-          baptism_date: ''
-        }));
-      } else {
-        setFormData(prev => ({ ...prev, [name]: value }));
-      }
-    } else {
-      setFormData(prev => ({ ...prev, [name]: value }));
-    }
+    setFormData(prev => ({ ...prev, [name]: value }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -79,25 +62,14 @@ export default function MemberForm({ initialData = {}, mode }: MemberFormProps) 
     try {
       const supabase = getSupabaseClient();
 
-      // Create a copy of formData and convert is_baptized string to boolean
-      const { is_baptized, ...dataToSubmit } = formData;
-
-      // Add is_baptized as boolean
-      dataToSubmit.is_baptized = is_baptized === 'yes';
-
-      // If not baptized, ensure baptism_date is null
-      if (is_baptized === 'no') {
-        dataToSubmit.baptism_date = null;
-      }
+      // Create a copy of formData
+      const dataToSubmit = { ...formData };
 
       // If this is a conversion from a visitor, we'll need to update the visitor record later
       const isConvertingVisitor = initialData.visitor_id ? true : false;
 
       if (mode === 'add') {
-        // Validate email is provided for new members
-        if (!formData.email) {
-          throw new Error('Email is required to create a member account');
-        }
+        // Email is now optional
 
         // Check if email already exists in auth system
         const { data: existingUsers, error: userCheckError } = await supabase
@@ -245,17 +217,16 @@ export default function MemberForm({ initialData = {}, mode }: MemberFormProps) 
 
         <div>
           <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-            Email {mode === 'add' && '*'}
+            Email
           </label>
           <input
             id="email"
             name="email"
             type="email"
-            required={mode === 'add'}
             value={formData.email}
             onChange={handleChange}
             className="input-field"
-            placeholder={mode === 'add' ? 'Required for account creation' : ''}
+            placeholder="Optional"
           />
         </div>
 
@@ -354,39 +325,7 @@ export default function MemberForm({ initialData = {}, mode }: MemberFormProps) 
           />
         </div>
 
-        <div>
-          <label htmlFor="is_baptized" className="block text-sm font-medium text-gray-700 mb-1">
-            Baptism Status
-          </label>
-          <select
-            id="is_baptized"
-            name="is_baptized"
-            value={formData.is_baptized}
-            onChange={handleChange}
-            className="input-field"
-          >
-            <option value="no">Not Baptized</option>
-            <option value="yes">Baptized</option>
-          </select>
-        </div>
 
-        <div>
-          <label htmlFor="baptism_date" className="block text-sm font-medium text-gray-700 mb-1">
-            Baptism Date
-          </label>
-          <input
-            id="baptism_date"
-            name="baptism_date"
-            type="date"
-            value={formData.baptism_date}
-            onChange={handleChange}
-            className="input-field"
-            disabled={formData.is_baptized === 'no'}
-          />
-          {formData.is_baptized === 'no' && (
-            <p className="text-xs text-gray-500 mt-1">Enable by selecting "Baptized" above</p>
-          )}
-        </div>
 
         <div>
           <label htmlFor="status" className="block text-sm font-medium text-gray-700 mb-1">

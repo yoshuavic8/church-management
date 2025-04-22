@@ -244,40 +244,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  // Login as member using password
+  // Login as member using password - simplified version
   const loginMemberWithPassword = async (email: string, password: string) => {
     try {
       console.log('Attempting to login with email:', email);
 
-      const response = await fetch('/api/auth/verify-password', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email, password }),
-      });
-
-      const data = await response.json();
-      console.log('Verify password response:', data);
-
-      if (!response.ok) {
-        console.error('Login failed:', data.error);
-        throw new Error(data.error || 'Login failed');
-      }
-
-      // Store member data in context
-      setUser(data.member);
-      setIsAdminUser(false);
-      setIsMember(true);
-
-      // Store member info in localStorage
-      localStorage.setItem('memberEmail', email);
-      localStorage.setItem('memberId', data.member.id);
-      localStorage.setItem('memberData', JSON.stringify(data.member));
-
+      // This is a simplified version that will need to be implemented
+      // with a new authentication mechanism
       return {
-        success: true,
-        passwordResetRequired: data.passwordResetRequired
+        success: false,
+        error: 'Member password login is not implemented in this version.'
       };
     } catch (error: any) {
       return {
@@ -327,22 +303,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
-  // Function to update password_reset_required flag
-  const updatePasswordResetFlag = async (userId: string) => {
-    console.log('Updating password_reset_required flag for:', userId);
-    try {
-      // Update user object in state
-      if (user && user.id === userId) {
-        const updatedUser = { ...user, password_reset_required: false };
-        setUser(updatedUser);
-        console.log('Updated user state with password_reset_required=false');
-      }
-      return true;
-    } catch (error) {
-      console.error('Error in updatePasswordResetFlag:', error);
-      return false;
-    }
-  };
+
 
   // Function to manually update user data
   const updateUserData = async (userId: string) => {
@@ -385,7 +346,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     logout,
     refreshUser,
     updateUserData,
-    updatePasswordResetFlag,
     setUser,
     setIsMember,
   };

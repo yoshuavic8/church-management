@@ -1,0 +1,14 @@
+./app/api/admin/set-admin-role/route.ts
+./app/api/admin/set-user-role/route.ts
+./app/api/auth/admin-register/route.ts
+./app/api/auth/check-member/route.ts
+./app/api/auth/generate-token/route.ts
+./app/api/auth/invalidate-tokens/route.ts
+./app/api/auth/reset-password/route.ts
+./app/api/auth/set-default-password/route.ts
+./app/api/auth/update-password-flag/route.ts
+./app/api/auth/verify-password-set/route.ts
+./app/api/auth/verify-password/route.ts
+./app/api/enrollments/route.ts
+./app/api/generate/route.ts
+./app/api/new/route.ts

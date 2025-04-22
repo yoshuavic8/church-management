@@ -1,8 +1,31 @@
 # Panduan Membuat Admin Baru
 
-Dokumen ini menjelaskan cara membuat admin baru untuk aplikasi Church Management melalui dashboard Supabase.
+Dokumen ini menjelaskan cara membuat admin baru untuk aplikasi Church Management.
 
-## Langkah-langkah Membuat Admin Baru
+## Cara Membuat Admin Baru
+
+Ada dua cara untuk membuat admin baru:
+
+### Metode 1: Menggunakan Halaman Admin Register (Direkomendasikan)
+
+1. **Akses Halaman Admin Register**
+   - Buka URL `/auth/admin/register` di browser Anda
+   - Halaman ini tidak terhubung dari menu manapun untuk alasan keamanan
+
+2. **Isi Formulir Pendaftaran**
+   - Masukkan nama depan dan nama belakang
+   - Masukkan alamat email
+   - Buat password (minimal 8 karakter)
+   - Masukkan kunci rahasia (secret key)
+     - Kunci rahasia default adalah `church-management-admin-secret`
+     - Untuk keamanan yang lebih baik, ubah kunci rahasia di file `.env.local`
+
+3. **Verifikasi Admin Baru**
+   - Setelah berhasil mendaftar, Anda akan diarahkan ke halaman login admin
+   - Login dengan email dan password yang baru dibuat
+   - Verifikasi bahwa Anda memiliki akses ke semua fitur admin
+
+### Metode 2: Melalui Dashboard Supabase
 
 1. **Login ke Dashboard Supabase**
    - Buka [Supabase Dashboard](https://app.supabase.com)
@@ -41,9 +64,11 @@ Dokumen ini menjelaskan cara membuat admin baru untuk aplikasi Church Management
 ## Catatan Keamanan
 
 - Hanya berikan akses admin kepada orang yang terpercaya
-- Pastikan password yang digunakan cukup kuat
+- Pastikan password yang digunakan cukup kuat (minimal 8 karakter)
 - Secara berkala periksa daftar admin di tabel members untuk memastikan keamanan
 - Jangan membagikan kredensial Supabase dengan orang yang tidak berwenang
+- Untuk keamanan yang lebih baik, ubah kunci rahasia (ADMIN_REGISTER_SECRET_KEY) di file `.env.local`
+- Halaman admin register tidak terhubung dari menu manapun untuk mencegah akses yang tidak sah
 
 ## Troubleshooting
 

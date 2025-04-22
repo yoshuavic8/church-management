@@ -6,7 +6,6 @@ import Link from 'next/link';
 import { getSupabaseClient, isAdmin } from '../../lib/supabase';
 import Header from '../../components/Header';
 import QRCodeGenerator from '../../components/QRCodeGenerator';
-import MemberTokenManager from '../../components/MemberTokenManager';
 import { useRef } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -373,10 +372,7 @@ export default function MemberDetailPage() {
             </div>
           </div>
 
-          {/* Member Token Manager - Only visible to admins */}
-          {isAdminUser && (
-            <MemberTokenManager member={member} />
-          )}
+
         </div>
       </div>
     </div>

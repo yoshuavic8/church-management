@@ -15,11 +15,6 @@ export default function AdminPageClient() {
   const [loadingArticles, setLoadingArticles] = useState(false);
   const [articleError, setArticleError] = useState<string | null>(null);
 
-  // User management state
-  const [users, setUsers] = useState<any[]>([]);
-  const [loadingUsers, setLoadingUsers] = useState(false);
-  const [userError, setUserError] = useState<string | null>(null);
-
   // Documents state
   const [recentDocuments, setRecentDocuments] = useState<any[]>([]);
   const [loadingDocuments, setLoadingDocuments] = useState(false);
@@ -39,8 +34,6 @@ export default function AdminPageClient() {
   useEffect(() => {
     if (activeTab === 'content') {
       fetchRecentArticles();
-    } else if (activeTab === 'users') {
-      fetchRecentUsers();
     } else if (activeTab === 'documents') {
       fetchRecentDocuments();
     } else if (activeTab === 'settings') {
@@ -98,45 +91,7 @@ export default function AdminPageClient() {
     }
   };
 
-  // Fetch recent users from Supabase
-  const fetchRecentUsers = async () => {
-    try {
-      setLoadingUsers(true);
-      setUserError(null);
-      const supabase = getSupabaseClient();
 
-      // Get the 5 most recent users
-      const { data, error } = await supabase
-        .from('members')
-        .select('id, first_name, last_name, email, role, role_level, status')
-        .order('created_at', { ascending: false })
-        .limit(5);
-
-      if (error) throw error;
-
-      setUsers(data || []);
-    } catch (error: any) {
-      console.error('Error fetching recent users:', error);
-      setUserError(error.message || 'Failed to load recent users');
-    } finally {
-      setLoadingUsers(false);
-    }
-  };
-
-  // Get role name based on role level
-  const getRoleName = (roleLevel: number) => {
-    switch (roleLevel) {
-      case 4:
-        return 'Administrator';
-      case 3:
-        return 'Ministry Leader';
-      case 2:
-        return 'Cell Leader';
-      case 1:
-      default:
-        return 'Member';
-    }
-  };
 
   // Fetch recent documents
   const fetchRecentDocuments = async () => {
@@ -246,16 +201,7 @@ export default function AdminPageClient() {
               >
                 Content Management
               </button>
-              <button
-                className={`py-2 px-4 font-medium ${
-                  activeTab === 'users'
-                    ? 'border-b-2 border-primary text-primary'
-                    : 'text-gray-500 hover:text-gray-700'
-                }`}
-                onClick={() => setActiveTab('users')}
-              >
-                User Management
-              </button>
+
               <button
                 className={`py-2 px-4 font-medium ${
                   activeTab === 'settings'
@@ -434,84 +380,7 @@ export default function AdminPageClient() {
         </div>
       )}
 
-          {activeTab === 'users' && (
-            <div className="rounded-lg border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-800">
-          <h2 className="text-xl font-semibold mb-4">User Management</h2>
-          <p className="text-gray-600 mb-6">
-            Manage user accounts and permissions for the church management system.
-          </p>
 
-          <div className="flex flex-wrap justify-end mb-4 gap-2">
-            <Link href="/admin/users" className="btn-secondary">
-              Manage Users
-            </Link>
-            <Link href="/admin/users/permissions" className="btn-secondary">
-              User Permissions
-            </Link>
-            <Link href="/admin/roles" className="btn-secondary">
-              Manage Roles
-            </Link>
-          </div>
-
-          <div className="overflow-x-auto">
-            <table className="min-w-full">
-              <thead>
-                <tr className="bg-gray-50">
-                  <th className="py-2 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
-                  <th className="py-2 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
-                  <th className="py-2 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
-                  <th className="py-2 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                  <th className="py-2 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200">
-                {loadingUsers ? (
-                  <tr>
-                    <td colSpan={5} className="py-4 text-center">
-                      <div className="inline-block animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-primary"></div>
-                      <p className="mt-2 text-sm text-gray-500">Loading users...</p>
-                    </td>
-                  </tr>
-                ) : userError ? (
-                  <tr>
-                    <td colSpan={5} className="py-4 text-center text-red-500">
-                      {userError}
-                    </td>
-                  </tr>
-                ) : users.length === 0 ? (
-                  <tr>
-                    <td colSpan={5} className="py-4 text-center text-gray-500">
-                      No users found.
-                    </td>
-                  </tr>
-                ) : (
-                  users.map(user => (
-                    <tr key={user.id}>
-                      <td className="py-3 px-4">{user.first_name} {user.last_name}</td>
-                      <td className="py-3 px-4">{user.email}</td>
-                      <td className="py-3 px-4">{getRoleName(user.role_level)}</td>
-                      <td className="py-3 px-4">
-                        <span className={`px-2 py-1 rounded-full text-xs ${user.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-                          {user.status === 'active' ? 'Active' : 'Inactive'}
-                        </span>
-                      </td>
-                      <td className="py-3 px-4">
-                        <Link href={`/admin/users/edit/${user.id}`} className="text-primary hover:underline mr-2">Edit</Link>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-
-          <div className="mt-4 text-center">
-            <Link href="/admin/users" className="text-primary hover:underline">
-              View All Users →
-            </Link>
-          </div>
-        </div>
-      )}
 
           {activeTab === 'settings' && (
             <div className="rounded-lg border border-gray-200 bg-white p-6 dark:border-gray-700 dark:bg-gray-800">
