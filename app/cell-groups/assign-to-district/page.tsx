@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { getSupabaseClient } from '../../../app/lib/supabase';
 import Header from '../../components/Header';
@@ -20,7 +20,7 @@ type CellGroup = {
   updated_at: string;
 };
 
-export default function AssignCellGroupToDistrictPage() {
+function AssignCellGroupContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const districtId = searchParams.get('district_id');
@@ -115,5 +115,17 @@ export default function AssignCellGroupToDistrictPage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function AssignCellGroupToDistrictPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex justify-center items-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+      </div>
+    }>
+      <AssignCellGroupContent />
+    </Suspense>
   );
 } 
