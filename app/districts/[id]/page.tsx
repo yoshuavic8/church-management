@@ -9,9 +9,12 @@ import Header from '../../components/Header';
 type District = {
   id: string;
   name: string;
-  leader1_id: string;
-  leader2_id: string;
+  description: string | null;
+  leader1_id: string | null;
+  leader2_id: string | null;
   status: string;
+  created_at: string;
+  updated_at: string;
 };
 
 type Leader = {
@@ -19,7 +22,7 @@ type Leader = {
   first_name: string;
   last_name: string;
   email: string;
-  phone: string;
+  phone: string | null;
 };
 
 type CellGroup = {
@@ -41,6 +44,7 @@ export default function DistrictDetailPage() {
   const [cellGroups, setCellGroups] = useState<CellGroup[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchDistrict = async () => {
@@ -51,7 +55,7 @@ export default function DistrictDetailPage() {
         const { data: districtData, error: districtError } = await supabase
           .from('districts')
           .select('*')
-          .eq('id', id)
+          .eq('id', id as string)
           .single();
 
         if (districtError) throw districtError;
@@ -92,7 +96,7 @@ export default function DistrictDetailPage() {
         const { data: cellGroupsData, error: cellGroupsError } = await supabase
           .from('cell_groups')
           .select('id, name, meeting_day, meeting_time, location, status')
-          .eq('district_id', id)
+          .eq('district_id', id as string)
           .order('name', { ascending: true });
 
         if (cellGroupsError) throw cellGroupsError;
@@ -103,6 +107,8 @@ export default function DistrictDetailPage() {
             .from('cell_group_members')
             .select('*', { count: 'exact', head: true })
             .eq('cell_group_id', group.id);
+
+          if (error) throw error;
 
           return {
             ...group,
@@ -121,6 +127,25 @@ export default function DistrictDetailPage() {
 
     fetchDistrict();
   }, [id]);
+
+  // Handler untuk menghapus cell group
+  const handleDeleteCellGroup = async (cellGroupId: string) => {
+    if (!confirm('Apakah Anda yakin ingin menghapus cell group ini dari district ini?')) return;
+    setDeletingId(cellGroupId);
+    try {
+      const supabase = getSupabaseClient();
+      const { error } = await supabase
+        .from('cell_groups')
+        .update({ district_id: null })
+        .eq('id', cellGroupId);
+      if (error) throw error;
+      setCellGroups(cellGroups.filter((g) => g.id !== cellGroupId));
+    } catch (err: any) {
+      alert(err.message || 'Gagal menghapus cell group dari district');
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   if (loading) {
     return (
@@ -161,7 +186,7 @@ export default function DistrictDetailPage() {
 
   // Define the action buttons for the header
   const actionButtons = (
-    <Link href={`/districts/edit/${district.id}`} className="btn-secondary">
+    <Link href={`/districts/${district.id}/edit`} className="btn-secondary">
       Edit
     </Link>
   );
@@ -198,107 +223,91 @@ export default function DistrictDetailPage() {
               </div>
 
               <div>
-                <h3 className="text-sm font-medium text-gray-500">Total Members</h3>
-                <p className="mt-1">{cellGroups.reduce((sum, group) => sum + group.member_count, 0)}</p>
+                <h3 className="text-sm font-medium text-gray-500">Leader 1</h3>
+                <p className="mt-1">
+                  {leader1 ? (
+                    <Link href={`/members/${leader1.id}`} className="text-primary hover:underline">
+                      {leader1.first_name} {leader1.last_name}
+                    </Link>
+                  ) : (
+                    'Not assigned'
+                  )}
+                </p>
+              </div>
+
+              <div>
+                <h3 className="text-sm font-medium text-gray-500">Leader 2</h3>
+                <p className="mt-1">
+                  {leader2 ? (
+                    <Link href={`/members/${leader2.id}`} className="text-primary hover:underline">
+                      {leader2.first_name} {leader2.last_name}
+                    </Link>
+                  ) : (
+                    'Not assigned'
+                  )}
+                </p>
               </div>
             </div>
           </div>
 
           <div className="card mt-6">
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-semibold">District Leaders</h2>
-            </div>
-
-            {!leader1 && !leader2 ? (
-              <p className="text-gray-500">No leaders assigned yet.</p>
-            ) : (
-              <div className="space-y-4">
-                {leader1 && (
-                  <div className="p-4 bg-gray-50 rounded-lg">
-                    <div className="flex justify-between">
-                      <h3 className="font-medium">
-                        <Link href={`/members/${leader1.id}`} className="text-primary hover:underline">
-                          {leader1.first_name} {leader1.last_name}
-                        </Link>
-                      </h3>
-                      <span className="text-sm text-gray-500">Leader 1</span>
-                    </div>
-                    <p className="text-sm text-gray-600 mt-1">{leader1.email}</p>
-                    <p className="text-sm text-gray-600">{leader1.phone}</p>
-                  </div>
-                )}
-
-                {leader2 && (
-                  <div className="p-4 bg-gray-50 rounded-lg">
-                    <div className="flex justify-between">
-                      <h3 className="font-medium">
-                        <Link href={`/members/${leader2.id}`} className="text-primary hover:underline">
-                          {leader2.first_name} {leader2.last_name}
-                        </Link>
-                      </h3>
-                      <span className="text-sm text-gray-500">Leader 2</span>
-                    </div>
-                    <p className="text-sm text-gray-600 mt-1">{leader2.email}</p>
-                    <p className="text-sm text-gray-600">{leader2.phone}</p>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        </div>
-
-        <div className="lg:col-span-1">
-          <div className="card">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-semibold">Cell Groups ({cellGroups.length})</h2>
-              <Link href={`/cell-groups/add?district=${district.id}`} className="text-primary hover:underline text-sm">
+              <h2 className="text-xl font-semibold">Cell Groups</h2>
+              <Link href={`/cell-groups/assign-to-district?district_id=${district.id}`} className="btn-primary">
                 Add Cell Group
               </Link>
             </div>
 
             {cellGroups.length === 0 ? (
-              <p className="text-gray-500">No cell groups in this district yet.</p>
+              <p className="text-gray-500">No cell groups found in this district.</p>
             ) : (
-              <div className="space-y-4">
-                {cellGroups.map(group => (
-                  <div key={group.id} className="p-3 border rounded-lg hover:shadow-sm transition-shadow">
-                    <Link href={`/cell-groups/${group.id}`} className="font-medium text-primary hover:underline">
-                      {group.name}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {cellGroups.map((group) => (
+                  <div key={group.id} className="card hover:shadow-md transition-shadow relative">
+                    <Link
+                      href={`/cell-groups/${group.id}`}
+                      className="block"
+                    >
+                      <h3 className="font-semibold mb-2">{group.name}</h3>
+                      <p className="text-sm text-gray-600">
+                        {group.meeting_day} at {formatTime(group.meeting_time)}
+                      </p>
+                      <p className="text-sm text-gray-600 mt-1">{group.location}</p>
+                      <p className="text-sm text-gray-600 mt-1">
+                        {group.member_count} members
+                      </p>
+                      <span className={`mt-2 inline-block px-2 py-1 rounded-full text-xs ${
+                        group.status === 'active'
+                          ? 'bg-green-100 text-green-800'
+                          : 'bg-red-100 text-red-800'
+                      }`}>
+                        {group.status.charAt(0).toUpperCase() + group.status.slice(1)}
+                      </span>
                     </Link>
-                    <div className="mt-2 text-sm text-gray-600">
-                      <div className="flex justify-between">
-                        <span>Members: {group.member_count}</span>
-                        <span className={`px-2 py-0.5 rounded-full text-xs ${
-                          group.status === 'active'
-                            ? 'bg-green-100 text-green-800'
-                            : 'bg-red-100 text-red-800'
-                        }`}>
-                          {group.status.charAt(0).toUpperCase() + group.status.slice(1)}
-                        </span>
-                      </div>
-                      {group.meeting_day && (
-                        <p className="mt-1">
-                          {group.meeting_day}s at {formatTime(group.meeting_time)}
-                        </p>
-                      )}
-                    </div>
+                    <button
+                      onClick={() => handleDeleteCellGroup(group.id)}
+                      className="absolute top-2 right-2 text-red-600 hover:text-red-800 bg-white rounded-full p-1 shadow"
+                      disabled={deletingId === group.id}
+                      title="Hapus Cell Group"
+                    >
+                      {deletingId === group.id ? '...' : '🗑️'}
+                    </button>
                   </div>
                 ))}
               </div>
             )}
           </div>
+        </div>
 
-          <div className="card mt-6">
+        <div>
+          <div className="card">
             <h2 className="text-xl font-semibold mb-4">Actions</h2>
-            <div className="space-y-2">
-              <Link href={`/cell-groups/add?district=${district.id}`} className="text-primary hover:underline block">
+            <div className="space-y-4">
+              <Link href={`/cell-groups/assign-to-district?district_id=${district.id}`} className="btn-primary block text-center">
                 Add Cell Group
               </Link>
-              <Link href={`/districts/edit/${district.id}`} className="text-primary hover:underline block">
+              <Link href={`/districts/${district.id}/edit`} className="text-primary hover:underline block">
                 Edit District
-              </Link>
-              <Link href={`/reports/district/${district.id}`} className="text-primary hover:underline block">
-                Generate Report
               </Link>
             </div>
           </div>
