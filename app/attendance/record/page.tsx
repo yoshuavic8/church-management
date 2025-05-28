@@ -546,11 +546,12 @@ function RecordAttendanceContent() {
       
       // Record participant attendance
       if (participants.length > 0) {
+        // Hanya gunakan kolom yang benar-benar ada di tabel attendance_participants
         const participantRecords = participants.map(p => ({
           meeting_id: meetingId,
           member_id: p.member_id,
           status: p.status,
-          is_registered: p.isRegistered,
+          notes: p.isRegistered ? 'Pre-registered member' : null, // Simpan informasi registrasi di notes sebagai gantinya
         }));
         
         console.log('Saving participant records:', participantRecords.length);
