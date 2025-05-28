@@ -495,33 +495,55 @@ function RecordAttendanceContent() {
     try {
       setSaving(true);
       setError(null);
+      
       const supabase = getSupabaseClient();
-
+      
+      if (!supabase) {
+        throw new Error('Database connection failed. Please refresh the page and try again.');
+      }
+      
+      console.log('Saving attendance record for category:', eventCategory);
+      
       // Create attendance meeting record
+      // Untuk kelas, simpan ID sesi di field notes karena tidak ada kolom khusus untuk itu
+      let notesValue = notes || null;
+      if (eventCategory === 'class' && contextId) {
+        notesValue = `Class Session ID: ${contextId}${notes ? '\n' + notes : ''}`;
+      }
+      
       const meetingData = {
         event_category: eventCategory,
         meeting_date: meetingDate,
         meeting_type: meetingType,
         topic: topic || null,
-        notes: notes || null,
+        notes: notesValue,
         location: location || null,
         offering: offering ? parseFloat(offering) : null,
         is_recurring: false,
         cell_group_id: eventCategory === 'cell_group' ? contextId : null,
         ministry_id: eventCategory === 'ministry' ? contextId : null,
-        class_session_id: eventCategory === 'class' ? contextId : null,
       };
-
+      
+      console.log('Meeting data to save:', meetingData);
+      
       const { data: meetingRecord, error: meetingError } = await supabase
         .from('attendance_meetings')
         .insert(meetingData)
         .select('id')
         .single();
-
-      if (meetingError) throw meetingError;
-
+        
+      if (meetingError) {
+        console.error('Error creating meeting record:', meetingError);
+        throw meetingError;
+      }
+      
+      if (!meetingRecord) {
+        throw new Error('Failed to create meeting record');
+      }
+      
       const meetingId = meetingRecord.id;
-
+      console.log('Created meeting with ID:', meetingId);
+      
       // Record participant attendance
       if (participants.length > 0) {
         const participantRecords = participants.map(p => ({
@@ -530,12 +552,17 @@ function RecordAttendanceContent() {
           status: p.status,
           is_registered: p.isRegistered,
         }));
-
+        
+        console.log('Saving participant records:', participantRecords.length);
+        
         const { error: participantsError } = await supabase
           .from('attendance_participants')
           .insert(participantRecords);
-
-        if (participantsError) throw participantsError;
+          
+        if (participantsError) {
+          console.error('Error saving participants:', participantsError);
+          throw participantsError;
+        }
       }
 
       // Update class session status if this is a class attendance

@@ -206,22 +206,30 @@ function ScanPageContent() {
       const offeringValue = offering ? parseFloat(offering) : null;
 
       // Prepare meeting record based on event category
+      // Simpan info konteks di field notes jika kategori adalah class
+      let notesWithContext = notes;
+      if (eventCategory === 'class') {
+        notesWithContext = `Session ID: ${selectedContextId}\n${notes || ''}`;
+      }
+
       const meetingRecord: any = {
         event_category: eventCategory,
         meeting_date: meetingDate,
         meeting_type: meetingType,
         topic,
-        notes,
+        notes: notesWithContext,
         location,
         offering: offeringValue,
       };
 
       // Add the appropriate context ID based on event category
+      // Hanya tambahkan kolom yang benar-benar ada di database
       if (eventCategory === 'cell_group') {
         meetingRecord.cell_group_id = selectedContextId;
       } else if (eventCategory === 'ministry') {
         meetingRecord.ministry_id = selectedContextId;
       }
+      // Untuk class, kita sudah simpan ID di notes
 
       console.log('Saving meeting record:', meetingRecord);
 
@@ -259,6 +267,26 @@ function ScanPageContent() {
       if (participantsError) {
         console.error('Participants creation error:', participantsError);
         throw participantsError;
+      }
+
+      // 3. Update class session status if this is a class attendance
+      if (eventCategory === 'class' && selectedContextId) {
+        try {
+          const { error: updateError } = await supabase
+            .from('class_sessions')
+            .update({ status: 'completed' })
+            .eq('id', selectedContextId);
+
+          if (updateError) {
+            console.error('Error updating class session status:', updateError);
+            // Don't throw this error as it's not critical to the overall operation
+          } else {
+            console.log('Class session status updated to completed');
+          }
+        } catch (error) {
+          console.error('Error updating class session:', error);
+          // Continue, this is not critical
+        }
       }
 
       console.log('Attendance recorded successfully');
