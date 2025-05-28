@@ -519,7 +519,7 @@ function RecordAttendanceContent() {
         notes: notesValue,
         location: location || null,
         offering: offering ? parseFloat(offering) : null,
-        is_recurring: false,
+        // Hapus is_recurring karena kolom ini tidak ada di tabel
         cell_group_id: eventCategory === 'cell_group' ? contextId : null,
         ministry_id: eventCategory === 'ministry' ? contextId : null,
       };

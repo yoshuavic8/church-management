@@ -212,6 +212,7 @@ function ScanPageContent() {
         notesWithContext = `Session ID: ${selectedContextId}\n${notes || ''}`;
       }
 
+      // Pastikan hanya menggunakan field yang ada di tabel attendance_meetings
       const meetingRecord: any = {
         event_category: eventCategory,
         meeting_date: meetingDate,
