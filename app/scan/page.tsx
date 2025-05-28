@@ -59,6 +59,11 @@ function ScanPageContent() {
       setLoadingContexts(true);
       try {
         const supabase = getSupabaseClient();
+        
+        if (!supabase) {
+          console.error('Could not initialize Supabase client');
+          return;
+        }
 
         if (eventCategory === 'cell_group') {
           const { data, error } = await supabase
@@ -85,7 +90,7 @@ function ScanPageContent() {
           setContextOptions([]);
         }
       } catch (error) {
-        
+        console.error('Error fetching context options:', error);
       } finally {
         setLoadingContexts(false);
       }
@@ -117,6 +122,11 @@ function ScanPageContent() {
 
       // Fetch member details
       const supabase = getSupabaseClient();
+      if (!supabase) {
+        setScanError('Database connection failed. Please refresh the page.');
+        return;
+      }
+      
       const { data, error } = await supabase
         .from('members')
         .select('id, first_name, last_name, status')
@@ -184,7 +194,13 @@ function ScanPageContent() {
       setIsSaving(true);
       setSaveError(null);
 
+      // Get a fresh Supabase client instance to ensure proper auth headers
       const supabase = getSupabaseClient();
+      
+      // Check if supabase client is properly initialized
+      if (!supabase) {
+        throw new Error('Database connection failed. Please refresh the page and try again.');
+      }
 
       // Parse offering value to float if provided
       const offeringValue = offering ? parseFloat(offering) : null;
@@ -207,19 +223,25 @@ function ScanPageContent() {
         meetingRecord.ministry_id = selectedContextId;
       }
 
+      console.log('Saving meeting record:', meetingRecord);
+
       // 1. Create the meeting record
       const { data: meetingData, error: meetingError } = await supabase
         .from('attendance_meetings')
         .insert(meetingRecord)
         .select();
 
-      if (meetingError) throw meetingError;
+      if (meetingError) {
+        console.error('Meeting creation error:', meetingError);
+        throw meetingError;
+      }
 
       if (!meetingData || meetingData.length === 0) {
         throw new Error('Failed to create meeting record');
       }
 
       const meetingId = meetingData[0].id;
+      console.log('Meeting created with ID:', meetingId);
 
       // 2. Record participants
       const participantRecords = scannedMembers.map(member => ({
@@ -228,12 +250,18 @@ function ScanPageContent() {
         status: 'present',
       }));
 
+      console.log('Saving participant records:', participantRecords);
+
       const { error: participantsError } = await supabase
         .from('attendance_participants')
         .insert(participantRecords);
 
-      if (participantsError) throw participantsError;
+      if (participantsError) {
+        console.error('Participants creation error:', participantsError);
+        throw participantsError;
+      }
 
+      console.log('Attendance recorded successfully');
       setSaveSuccess(true);
 
       // Redirect to attendance details page after a short delay
@@ -242,7 +270,7 @@ function ScanPageContent() {
       }, 1500);
 
     } catch (error: any) {
-      
+      console.error('Save attendance error:', error);
       setSaveError(error.message || 'Failed to save attendance record');
     } finally {
       setIsSaving(false);
