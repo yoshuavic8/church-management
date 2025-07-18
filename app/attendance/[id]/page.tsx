@@ -208,6 +208,19 @@ export default function AttendanceDetailPage() {
         backLabel="Attendance List"
       />
 
+      {/* Action buttons */}
+      <div className="mb-4 flex justify-end space-x-3">
+        <Link
+          href={`/attendance/${id}/edit`}
+          className="btn-secondary flex items-center"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-5m-2-3l2.5-2.5a2.121 2.121 0 00-3-3L10 11v3h3l8.5-8.5z" />
+          </svg>
+          Edit Record
+        </Link>
+      </div>
+
       <div className="card mb-6">
         <div className="flex justify-between items-start">
           <div>
