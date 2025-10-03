@@ -1,6 +1,33 @@
 # Church Management System
 
-A comprehensive church management system built with Next.js, Tailwind CSS, and Supabase. This application helps churches manage members, cell groups, districts, classes, pastoral services, attendance tracking, and administrative document generation.
+A comprehensive church manageme### Database Setup
+
+1. Set up MySQL database
+2. Clone the API repository:
+   ```bash
+   git clone <api-repo-url> church-management-api
+   cd church-management-api
+   ```
+3. Install dependencies:
+   ```bash
+   npm install
+   ```
+4. Configure the database:
+   ```bash
+   # Copy the environment file
+   cp .env.example .env
+   
+   # Add your database URL
+   DATABASE_URL="mysql://username:password@localhost:3306/church_management"
+   ```
+5. Run database migrations:
+   ```bash
+   npm run migrate
+   ```
+6. Start the API server:
+   ```bash
+   npm run dev
+   ```lt with Next.js, Tailwind CSS, and a Node.js API with MySQL. This application helps churches manage members, cell groups, districts, classes, pastoral services, attendance tracking, and administrative document generation.
 
 ## Features
 
@@ -16,7 +43,7 @@ A comprehensive church management system built with Next.js, Tailwind CSS, and S
 ## Tech Stack
 
 - **Frontend**: Next.js, React, Tailwind CSS
-- **Backend**: Supabase (PostgreSQL database, authentication, storage)
+- **Backend**: Node.js API with Express and Prisma (MySQL database)
 - **PDF Generation**: jsPDF
 
 ## Getting Started
@@ -43,13 +70,12 @@ A comprehensive church management system built with Next.js, Tailwind CSS, and S
 
 3. Set up environment variables:
    - Create a `.env.local` file in the root directory
-   - Add your Supabase URL and anon key:
-     ```
-     NEXT_PUBLIC_SUPABASE_URL=your-supabase-url
-     NEXT_PUBLIC_SUPABASE_ANON_KEY=your-supabase-anon-key
-     ```
-
-4. Run the development server:
+   - Add your API configuration:
+   ```
+     NEXT_PUBLIC_API_URL=http://localhost:3001/api
+     API_URL=http://localhost:3001
+     ADMIN_REGISTER_SECRET_KEY=your-admin-secret-key
+   ```4. Run the development server:
    ```bash
    npm run dev
    # or
@@ -60,17 +86,41 @@ A comprehensive church management system built with Next.js, Tailwind CSS, and S
 
 ## Database Setup
 
-1. Create a new project in [Supabase](https://supabase.com/)
-2. Set up the following tables:
+1. Set up MySQL database
+2. Clone the API repository:
+   ```bash
+   git clone <api-repo-url> church-management-api
+   cd church-management-api
+   ```
+3. Install dependencies:
+   ```bash
+   npm install
+   ```
+4. Configure the database:
+   ```bash
+   # Copy the environment file
+   cp .env.example .env
+   
+   # Add your database URL
+   DATABASE_URL="mysql://username:password@localhost:3306/church_management"
+   ```
+5. Run database migrations:
+   ```bash
+   npm run migrate
+   ```
+6. Start the API server:
+   ```bash
+   npm run dev
+   ```
+
+The following tables are automatically created:
    - members
    - cell_groups
    - districts
    - classes
-   - pastoral_services
+   - ministries
    - attendance
-   - documents
-
-Detailed schema information can be found in the `database` directory.
+   - donations
 
 ## Deployment
 
@@ -89,6 +139,9 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 - [Next.js](https://nextjs.org/)
 - [Tailwind CSS](https://tailwindcss.com/)
-- [Supabase](https://supabase.com/)
+- [Node.js](https://nodejs.org/)
+- [Express.js](https://expressjs.com/)
+- [Prisma](https://prisma.io/)
+- [MySQL](https://mysql.com/)
 - [React Hook Form](https://react-hook-form.com/)
 - [jsPDF](https://github.com/MrRio/jsPDF)

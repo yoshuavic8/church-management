@@ -2,16 +2,20 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { getSupabaseClient } from '../../../lib/supabase';
-import Header from '../../../components/Header';
+import { apiClient } from '../../../lib/api-client';
+import Layout from '../../../components/layout/Layout';
 import RichTextEditor from '../../../components/RichTextEditor';
+import ImageSelector from '../../../components/ImageSelector';
+import { useAuth } from '../../../contexts/AuthContext';
 
 export default function AddArticle() {
   const router = useRouter();
+  const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
-  const [categories, setCategories] = useState<string[]>([]);
+  const [categories, setCategories] = useState<any[]>([]);
+  const [creatingCategory, setCreatingCategory] = useState(false);
   const [formData, setFormData] = useState({
     title: '',
     summary: '',
@@ -29,21 +33,40 @@ export default function AddArticle() {
 
   const fetchCategories = async () => {
     try {
-      const supabase = getSupabaseClient();
-
-      const { data, error } = await supabase
-        .from('articles')
-        .select('category')
-        .order('category', { ascending: true });
-
-      if (error) throw error;
-
-      // Extract unique categories
-      const uniqueCategories = [...new Set(data.map(item => item.category))];
-      setCategories(uniqueCategories);
-
+      const response = await apiClient.getArticleCategories();
+      if (response.success && response.data) {
+        setCategories(response.data);
+      }
     } catch (error) {
+      console.error('Failed to fetch categories:', error);
+    }
+  };
 
+  const createNewCategory = async () => {
+    if (!formData.newCategory.trim()) return;
+    
+    setCreatingCategory(true);
+    try {
+      const response = await apiClient.createArticleCategory({
+        name: formData.newCategory.trim()
+      });
+      
+      if (response.success) {
+        // Refresh categories
+        await fetchCategories();
+        // Select the newly created category
+        setFormData(prev => ({
+          ...prev,
+          category: formData.newCategory.trim(),
+          newCategory: ''
+        }));
+      } else {
+        throw new Error(response.error?.message || 'Failed to create category');
+      }
+    } catch (error: any) {
+      setError(`Failed to create category: ${error.message}`);
+    } finally {
+      setCreatingCategory(false);
     }
   };
 
@@ -70,13 +93,17 @@ export default function AddArticle() {
     setSuccess(false);
 
     try {
-      const supabase = getSupabaseClient();
-
-      // Get current user
-      const { data: { user } } = await supabase.auth.getUser();
-
       if (!user) {
         throw new Error('You must be logged in to create an article');
+      }
+
+      // Validate required fields
+      if (!formData.title.trim()) {
+        throw new Error('Title is required');
+      }
+      
+      if (!formData.content.trim()) {
+        throw new Error('Content is required');
       }
 
       // Determine category
@@ -88,32 +115,31 @@ export default function AddArticle() {
         throw new Error('Please select or enter a category');
       }
 
-      // If setting to featured, first unfeature all other articles
-      if (formData.featured) {
-        await supabase
-          .from('articles')
-          .update({ featured: false })
-          .eq('featured', true);
+      // Create article data with proper data types
+      const articleData: any = {
+        title: formData.title.trim(),
+        content: formData.content,
+        category: category,
+        status: formData.status,
+        featured: Boolean(formData.featured), // Ensure boolean type
+        author_id: user.id
+      };
+
+      // Only include summary if it's not empty
+      if (formData.summary.trim()) {
+        articleData.summary = formData.summary.trim();
       }
 
-      // Create article
-      const { data, error } = await supabase
-        .from('articles')
-        .insert({
-          title: formData.title,
-          summary: formData.summary,
-          content: formData.content,
-          category,
-          image_url: formData.image_url,
-          status: formData.status,
-          featured: formData.featured,
-          author_id: user.id,
-          published_at: new Date().toISOString()
-        })
-        .select()
-        .single();
+      // Only include image_url if it's not empty
+      if (formData.image_url.trim()) {
+        articleData.image_url = formData.image_url.trim();
+      }
 
-      if (error) throw error;
+      const response = await apiClient.createArticle(articleData);
+
+      if (!response.success) {
+        throw new Error(response.error?.message || 'Failed to create article');
+      }
 
       setSuccess(true);
 
@@ -135,7 +161,6 @@ export default function AddArticle() {
       }, 2000);
 
     } catch (error: any) {
-
       setError(error.message || 'Failed to create article');
     } finally {
       setLoading(false);
@@ -143,14 +168,28 @@ export default function AddArticle() {
   };
 
   return (
-    <div>
-      <Header
-        title="Add New Article"
-        backTo="/admin/articles"
-        backLabel="Back to Articles"
-      />
+    <Layout>
+      <div className="space-y-6">
+        {/* Page Header */}
+        <div className="bg-white shadow rounded-lg p-6">
+          <div className="flex items-center space-x-4">
+            <button
+              onClick={() => router.back()}
+              className="flex items-center text-gray-600 hover:text-gray-900 transition-colors"
+            >
+              <svg className="h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+              </svg>
+              Back to Articles
+            </button>
+          </div>
+          <div className="mt-4">
+            <h1 className="text-2xl font-bold text-gray-900">Add New Article</h1>
+            <p className="text-gray-500">Create a new article or announcement</p>
+          </div>
+        </div>
 
-      <div className="bg-white shadow rounded-lg p-6">
+        <div className="bg-white shadow rounded-lg p-6">
         {error && (
           <div className="bg-red-50 border-l-4 border-red-400 p-4 mb-6">
             <div className="flex">
@@ -253,8 +292,8 @@ export default function AddArticle() {
             >
               <option value="">Select a category</option>
               {categories.map((category) => (
-                <option key={category} value={category}>
-                  {category}
+                <option key={category.name} value={category.name}>
+                  {category.name}
                 </option>
               ))}
               <option value="new">+ Add new category</option>
@@ -263,41 +302,44 @@ export default function AddArticle() {
 
           {/* New Category (conditional) */}
           {formData.category === 'new' && (
-            <div>
+            <div className="space-y-2">
               <label htmlFor="newCategory" className="block text-sm font-medium text-gray-700 mb-1">
-                New Category <span className="text-red-500">*</span>
+                New Category Name <span className="text-red-500">*</span>
               </label>
-              <input
-                type="text"
-                id="newCategory"
-                name="newCategory"
-                value={formData.newCategory}
-                onChange={handleInputChange}
-                required
-                className="input-field"
-                placeholder="Enter new category name"
-              />
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  id="newCategory"
+                  name="newCategory"
+                  value={formData.newCategory}
+                  onChange={handleInputChange}
+                  placeholder="Enter new category name"
+                  className="input-field flex-1"
+                />
+                <button
+                  type="button"
+                  onClick={createNewCategory}
+                  disabled={!formData.newCategory.trim() || creatingCategory}
+                  className="px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600 disabled:bg-gray-300 disabled:cursor-not-allowed text-sm whitespace-nowrap"
+                >
+                  {creatingCategory ? 'Creating...' : 'Create Category'}
+                </button>
+              </div>
+              <p className="text-xs text-gray-500">
+                This will create a new category that can be reused for other articles
+              </p>
             </div>
           )}
 
-          {/* Image URL */}
-          <div>
-            <label htmlFor="image_url" className="block text-sm font-medium text-gray-700 mb-1">
-              Image URL
-            </label>
-            <input
-              type="url"
-              id="image_url"
-              name="image_url"
-              value={formData.image_url}
-              onChange={handleInputChange}
-              className="input-field"
-              placeholder="https://example.com/image.jpg"
-            />
-            <p className="mt-1 text-xs text-gray-500">
-              URL to an image for this article (optional)
-            </p>
-          </div>
+          {/* Image */}
+          <ImageSelector
+            value={formData.image_url}
+            onChange={(url) => setFormData(prev => ({ ...prev, image_url: url }))}
+            label="Article Image"
+            placeholder="Enter image URL or select from gallery"
+            showFileManager={true}
+            allowManualUrl={true}
+          />
 
           {/* Status and Featured */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -349,7 +391,8 @@ export default function AddArticle() {
             </button>
           </div>
         </form>
+        </div>
       </div>
-    </div>
+    </Layout>
   );
 }

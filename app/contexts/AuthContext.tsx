@@ -1,7 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { getSupabaseClient, isAdmin, validateMemberToken } from '../lib/supabase';
+import { apiClient } from '../lib/api-client';
 import { useRouter } from 'next/navigation';
 
 // Define the Member type
@@ -12,7 +12,7 @@ export type Member = {
   last_name: string;
   role: string;
   role_level: number;
-  status: string;
+  status?: string;
   [key: string]: any; // Allow for other properties
 };
 
@@ -27,6 +27,7 @@ type AuthContextType = {
   loginMemberWithPassword: (email: string, password: string) => Promise<{ success: boolean; error?: string; passwordResetRequired?: boolean }>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
+  updateUserData: (userData: Member) => void;
   setUser: (user: Member | null) => void;
   setIsMember: (isMember: boolean) => void;
 };
@@ -41,11 +42,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isAdminUser, setIsAdminUser] = useState(false);
   const [isMemberUser, setIsMember] = useState(false);
   const router = useRouter();
-  const supabase = getSupabaseClient();
 
   // Function to check and set admin status
-  const checkAdminStatus = async () => {
-    const adminStatus = await isAdmin();
+  const checkAdminStatus = (user: Member) => {
+    const adminStatus = user.role === 'admin' || (user.role_level || 0) >= 4;
     setIsAdminUser(adminStatus);
     return adminStatus;
   };
@@ -53,67 +53,36 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Function to refresh user data
   const refreshUser = async () => {
     setLoading(true);
-    console.log('Refreshing user data');
 
     try {
-      // First check if user is logged in with Supabase Auth
-      const { data: { session } } = await supabase.auth.getSession();
-      console.log('Supabase session:', session ? 'exists' : 'none');
+      // Check if user is logged in with API token
+      const response = await apiClient.getCurrentUser();
 
-      if (session?.user) {
-        // User is logged in with Supabase Auth, get their member record
-        const { data: member } = await supabase
-          .from('members')
-          .select('*')
-          .eq('id', session.user.id)
-          .single();
-
-        if (member) {
-          console.log('Found member record for admin user:', member.id);
-          setUser(member);
-          const adminStatus = await checkAdminStatus();
-          setIsAdminUser(adminStatus);
-          setIsMember(!adminStatus); // If admin, not a regular member
-          setLoading(false);
-          return;
-        }
+      if (response.success && response.data) {
+        setUser(response.data);
+        const adminStatus = checkAdminStatus(response.data);
+        setIsAdminUser(adminStatus);
+        setIsMember(!adminStatus); // If admin, not a regular member
+        setLoading(false);
+        return;
       }
 
-      // If not logged in with Supabase Auth, check for member token in localStorage
-      const memberToken = localStorage.getItem('memberToken');
-      if (memberToken) {
-        const member = await validateMemberToken(memberToken);
-        if (member) {
-          setUser(member);
-          setIsAdminUser(false); // Member tokens are never admin
-          setIsMember(true);
-          setLoading(false);
-          return;
-        } else {
-          // Invalid token, clear it
-          localStorage.removeItem('memberToken');
-        }
-      }
-
-      // Check for member email/id in localStorage (password-based login)
+      // If no API token, check for legacy member data in localStorage
       const memberId = localStorage.getItem('memberId');
       const memberEmail = localStorage.getItem('memberEmail');
       const memberDataStr = localStorage.getItem('memberData');
-      console.log('Checking for member login:', memberId ? 'ID exists' : 'No ID', memberEmail ? 'Email exists' : 'No email', memberDataStr ? 'Data exists' : 'No data');
 
       if (memberId && memberEmail) {
         // First try to use memberData from localStorage if available
         if (memberDataStr) {
           try {
             const memberData = JSON.parse(memberDataStr);
-            console.log('Using member data from localStorage:', memberData.id);
 
             if (memberData && memberData.id === memberId) {
               setUser(memberData);
               setIsAdminUser(false);
               setIsMember(true);
               setLoading(false);
-              console.log('Member data loaded from localStorage, password reset required:', memberData.password_reset_required === true);
               return;
             }
           } catch (parseError) {
@@ -121,27 +90,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           }
         }
 
-        // If no valid data in localStorage, fetch from database
-        console.log('Fetching member data from database');
-        const { data: member, error } = await supabase
-          .from('members')
-          .select('*')
-          .eq('id', memberId)
-          .single();
+        // If no valid data in localStorage, fetch from API
+        const response = await apiClient.getMember(memberId);
 
-        if (error) {
-          console.error('Error fetching member data:', error);
+        if (!response.success) {
+          console.error('Error fetching member data:', response.error?.message);
         }
 
-        if (member) {
-          console.log('Found member record for password login:', member.id, 'Password reset required:', member.password_reset_required);
-          setUser(member);
+        if (response.success && response.data) {
+          setUser(response.data);
           setIsAdminUser(false);
           setIsMember(true);
           setLoading(false);
           return;
         } else {
-          console.log('No member found with stored ID/email');
           // Invalid member data, clear it
           localStorage.removeItem('memberId');
           localStorage.removeItem('memberEmail');
@@ -162,47 +124,35 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setLoading(false);
   };
 
-  // Login as admin using Supabase Auth
+  // Login as admin using API
   const loginAdmin = async (email: string, password: string) => {
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
+      const response = await apiClient.loginAdmin(email, password);
 
-      if (error) throw error;
+      if (!response.success) {
+        return {
+          success: false,
+          error: response.error?.message || 'Login failed. Please try again.'
+        };
+      }
 
-      if (data.user) {
-        // Check if the user is an admin
-        const adminStatus = await checkAdminStatus();
+      if (response.data) {
+        // Set user data
+        setUser(response.data.user);
+        const adminStatus = checkAdminStatus(response.data.user);
+        setIsAdminUser(adminStatus);
+        setIsMember(!adminStatus);
 
         if (!adminStatus) {
-          // Not an admin, sign out
-          await supabase.auth.signOut();
+          // Not an admin, clear token
+          apiClient.clearToken();
           return {
             success: false,
             error: 'You do not have admin privileges.'
           };
         }
 
-        // Get the member record
-        const { data: member } = await supabase
-          .from('members')
-          .select('*')
-          .eq('id', data.user.id)
-          .single();
-
-        if (member) {
-          setUser(member);
-          return { success: true };
-        } else {
-          // No member record found
-          await supabase.auth.signOut();
-          return {
-            success: false,
-            error: 'Admin account not properly set up. Please contact support.'
-          };
-        }
+        return { success: true };
       }
 
       return {
@@ -210,7 +160,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         error: 'Login failed. Please try again.'
       };
     } catch (error: any) {
-
+      console.error('Admin login error:', error);
       return {
         success: false,
         error: error.message || 'Login failed. Please try again.'
@@ -218,44 +168,50 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  // Login as member using token
+  // Login as member using token (legacy support)
   const loginMember = async (token: string) => {
     try {
-      const member = await validateMemberToken(token);
+      // For now, this is legacy support - we'll phase this out
+      return {
+        success: false,
+        error: 'Token-based login is deprecated. Please use email/password login.'
+      };
+    } catch (error: any) {
+      return {
+        success: false,
+        error: error.message || 'Login failed. Please try again.'
+      };
+    }
+  };
 
-      if (member) {
-        setUser(member);
-        setIsAdminUser(false);
-        setIsMember(true);
-        localStorage.setItem('memberToken', token);
+  // Login as member using password
+  const loginMemberWithPassword = async (email: string, password: string) => {
+    try {
+      const response = await apiClient.loginMember(email, password);
+
+      if (!response.success) {
+        return {
+          success: false,
+          error: response.error?.message || 'Login failed. Please try again.'
+        };
+      }
+
+      if (response.data) {
+        // Set user data
+        setUser(response.data.user);
+        const adminStatus = checkAdminStatus(response.data.user);
+        setIsAdminUser(adminStatus);
+        setIsMember(!adminStatus);
+
         return { success: true };
       }
 
       return {
         success: false,
-        error: 'Invalid or expired token. Please try again.'
+        error: 'Login failed. Please try again.'
       };
     } catch (error: any) {
-
-      return {
-        success: false,
-        error: error.message || 'Login failed. Please try again.'
-      };
-    }
-  };
-
-  // Login as member using password - simplified version
-  const loginMemberWithPassword = async (email: string, password: string) => {
-    try {
-      console.log('Attempting to login with email:', email);
-
-      // This is a simplified version that will need to be implemented
-      // with a new authentication mechanism
-      return {
-        success: false,
-        error: 'Member password login is not implemented in this version.'
-      };
-    } catch (error: any) {
+      console.error('Member login error:', error);
       return {
         success: false,
         error: error.message || 'Login failed. Please try again.'
@@ -265,13 +221,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // Logout function
   const logout = async () => {
-    // Clear Supabase Auth session
-    await supabase.auth.signOut();
+    // Call API logout
+    await apiClient.logout();
 
-    // Clear member data
+    // Clear all local data
     localStorage.removeItem('memberToken');
     localStorage.removeItem('memberEmail');
     localStorage.removeItem('memberId');
+    localStorage.removeItem('memberData');
+    
+    // Clear session storage backup used by scanner
+    sessionStorage.removeItem('scanner_user');
+    sessionStorage.removeItem('scanner_meetings');
 
     // Reset state
     setUser(null);
@@ -285,54 +246,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Check for existing session on mount
   useEffect(() => {
     refreshUser();
-
-    // Set up auth state change listener
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        if (event === 'SIGNED_IN') {
-          refreshUser();
-        } else if (event === 'SIGNED_OUT') {
-          setUser(null);
-          setIsAdminUser(false);
-        }
-      }
-    );
-
-    return () => {
-      subscription.unsubscribe();
-    };
   }, []);
 
 
 
   // Function to manually update user data
-  const updateUserData = async (userId: string) => {
-    console.log('Manually updating user data for:', userId);
-    try {
-      // Force cache refresh by adding a timestamp parameter
-      const timestamp = new Date().getTime();
-
-      const { data, error } = await supabase
-        .from('members')
-        .select('*')
-        .eq('id', userId)
-        .single();
-
-      if (error) {
-        console.error('Error fetching updated user data:', error);
-        return false;
-      }
-
-      if (data) {
-        console.log('Updated user data:', data);
-        setUser(data);
-        return true;
-      }
-      return false;
-    } catch (error) {
-      console.error('Error in updateUserData:', error);
-      return false;
-    }
+  const updateUserData = (userData: Member) => {
+    setUser(userData);
+    const adminStatus = checkAdminStatus(userData);
+    setIsAdminUser(adminStatus);
+    setIsMember(!adminStatus);
   };
 
   const value = {

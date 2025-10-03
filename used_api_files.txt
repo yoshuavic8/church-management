@@ -1,9 +1,0 @@
-/api/admin/set-admin-role
-/api/admin/set-user-role
-/api/auth/admin-register
-/api/auth/check-member
-/api/auth/generate-token
-/api/auth/invalidate-tokens
-/api/auth/reset-password
-/api/auth/verify-password
-/api/enrollments

@@ -13,7 +13,7 @@ interface HeaderProps {
 const Header = ({ sidebarOpen, setSidebarOpen }: HeaderProps) => {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
-  const { user, logout } = useAuth();
+  const { user, logout, isAdmin } = useAuth();
   const pathname = usePathname();
 
   // Check if dark mode is enabled on component mount
@@ -158,7 +158,7 @@ const Header = ({ sidebarOpen, setSidebarOpen }: HeaderProps) => {
                   {user ? user.email : 'Guest'}
                 </span>
                 <span className="block text-xs text-gray-500">
-                  {user ? (user.is_admin ? 'Admin' : 'Member') : ''}
+                  {user ? (isAdmin ? 'Administrator' : 'Member') : ''}
                 </span>
               </span>
               <div className="h-10 w-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-700 dark:bg-gray-800 dark:text-gray-300">
@@ -209,7 +209,7 @@ const Header = ({ sidebarOpen, setSidebarOpen }: HeaderProps) => {
                       Dashboard
                     </Link>
                   </li>
-                  {user && user.is_admin && (
+                  {isAdmin && (
                     <li>
                       <Link
                         href="/admin/roles"

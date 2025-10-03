@@ -1,224 +1,269 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
-import { useParams } from 'next/navigation';
-import { getSupabaseClient } from '../../../lib/supabase';
+import { apiClient } from '../../../lib/api-client';
+import MemberLayout from '../../../components/layout/MemberLayout';
+import ProtectedRoute from '../../../components/ProtectedRoute';
+import DOMPurify from 'isomorphic-dompurify';
+import { resolveImageUrl, handleImageError } from '../../../utils/image-helpers';
 
-export default function ArticleDetail() {
+interface Article {
+  id: string;
+  title: string;
+  content: string;
+  summary?: string;
+  category: string;
+  image_url?: string;
+  published_at: string;
+  view_count: number;
+  featured: boolean;
+  author: {
+    id: string;
+    first_name: string;
+    last_name: string;
+  };
+}
+
+export default function MemberArticleDetail() {
+  const router = useRouter();
   const params = useParams();
   const articleId = params.id as string;
   
+  const [article, setArticle] = useState<Article | null>(null);
   const [loading, setLoading] = useState(true);
-  const [article, setArticle] = useState<any>(null);
-  const [author, setAuthor] = useState<any>(null);
-  const [relatedArticles, setRelatedArticles] = useState<any[]>([]);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState('');
+  
+  // Use sessionStorage untuk persistent tracking across component remounts
+  const VIEW_TRACKING_KEY = 'article_views_tracked';
+  const viewTrackingInProgress = useRef<Set<string>>(new Set());
+  
+  const getTrackedViews = (): Set<string> => {
+    if (typeof window === 'undefined') return new Set();
+    try {
+      const stored = sessionStorage.getItem(VIEW_TRACKING_KEY);
+      return stored ? new Set(JSON.parse(stored)) : new Set();
+    } catch {
+      return new Set();
+    }
+  };
+  
+  const saveTrackedViews = (viewsSet: Set<string>) => {
+    if (typeof window === 'undefined') return;
+    try {
+      sessionStorage.setItem(VIEW_TRACKING_KEY, JSON.stringify(Array.from(viewsSet)));
+    } catch (error) {
+      console.error('Failed to save tracked views:', error);
+    }
+  };
+  
+  const trackView = async (id: string) => {
+    const trackedViews = getTrackedViews();
+    
+    // Double check: jika sudah di-track di sessionStorage atau sedang dalam proses
+    if (trackedViews.has(id) || viewTrackingInProgress.current.has(id)) {
+      if (process.env.NODE_ENV === 'development') {
+        console.log('View already tracked or in progress for article:', id);
+      }
+      return;
+    }
+    
+    // Mark sebagai sedang dalam proses untuk prevent race condition
+    viewTrackingInProgress.current.add(id);
+    
+    try {
+      if (process.env.NODE_ENV === 'development') {
+        console.log('Tracking view for article:', id);
+      }
+      
+      await apiClient.incrementArticleView(id);
+      
+      // Update tracked views di sessionStorage
+      trackedViews.add(id);
+      saveTrackedViews(trackedViews);
+      
+      if (process.env.NODE_ENV === 'development') {
+        console.log('View successfully tracked for article:', id);
+      }
+    } catch (error) {
+      console.error('Failed to track view:', error);
+    } finally {
+      // Remove dari progress tracking
+      viewTrackingInProgress.current.delete(id);
+    }
+  };
 
-  useEffect(() => {
-    fetchArticleDetails();
-  }, [articleId]);
-
-  const fetchArticleDetails = async () => {
+  const fetchArticle = async () => {
     try {
       setLoading(true);
-      setError(null);
-      const supabase = getSupabaseClient();
+      console.log('Fetching article with ID:', articleId); // Debug log
+      const response = await apiClient.getArticle(articleId);
       
-      // Fetch article details
-      const { data, error } = await supabase
-        .from('articles')
-        .select('*')
-        .eq('id', articleId)
-        .eq('status', 'published')
-        .single();
+      console.log('Article response:', response); // Debug log
+      
+      if (response.success && response.data) {
+        setArticle(response.data);
+        setError('');
         
-      if (error) throw error;
-      
-      if (!data) {
-        throw new Error('Article not found');
+        // Track view setelah artikel berhasil di-load
+        await trackView(articleId);
+      } else {
+        setError('Artikel tidak ditemukan');
       }
-      
-      setArticle(data);
-      
-      // Increment view count
-      await supabase
-        .from('articles')
-        .update({ view_count: (data.view_count || 0) + 1 })
-        .eq('id', articleId);
-      
-      // Fetch author details if available
-      if (data.author_id) {
-        const { data: authorData, error: authorError } = await supabase
-          .from('members')
-          .select('first_name, last_name, role')
-          .eq('id', data.author_id)
-          .single();
-          
-        if (!authorError && authorData) {
-          setAuthor(authorData);
-        }
-      }
-      
-      // Fetch related articles (same category, excluding current)
-      const { data: relatedData, error: relatedError } = await supabase
-        .from('articles')
-        .select('id, title, summary, image_url, published_at')
-        .eq('category', data.category)
-        .eq('status', 'published')
-        .neq('id', articleId)
-        .order('published_at', { ascending: false })
-        .limit(3);
-        
-      if (!relatedError) {
-        setRelatedArticles(relatedData || []);
-      }
-      
-    } catch (error: any) {
-      
-      setError(error.message || 'Failed to load article');
+    } catch (err: any) {
+      console.error('Error fetching article:', err); // Debug log
+      setError(err.message || 'Gagal memuat artikel');
     } finally {
       setLoading(false);
     }
   };
 
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
-  };
+  useEffect(() => {
+    if (articleId) {
+      fetchArticle();
+    }
+  }, [articleId]);
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
-      </div>
+      <ProtectedRoute>
+        <MemberLayout>
+          <div className="flex items-center justify-center min-h-screen">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+          </div>
+        </MemberLayout>
+      </ProtectedRoute>
     );
   }
 
-  if (error || !article) {
+  if (error) {
     return (
-      <div className="bg-white shadow rounded-lg p-8 text-center">
-        <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 text-gray-300 mx-auto mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-        </svg>
-        <h2 className="text-xl font-semibold text-gray-900 mb-2">Article Not Found</h2>
-        <p className="text-gray-500 mb-6">{error || 'The article you are looking for does not exist or has been removed.'}</p>
-        <Link 
-          href="/member/news" 
-          className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
-        >
-          Back to News
-        </Link>
-      </div>
+      <ProtectedRoute>
+        <MemberLayout>
+          <div className="max-w-4xl mx-auto px-4 py-8">
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+              <p className="text-red-600">{error}</p>
+            </div>
+            <div className="mt-4">
+              <Link
+                href="/member/news"
+                className="text-blue-600 hover:text-blue-800 font-medium"
+              >
+                ← Kembali ke Artikel & Informasi
+              </Link>
+            </div>
+          </div>
+        </MemberLayout>
+      </ProtectedRoute>
+    );
+  }
+
+  if (!article) {
+    return (
+      <ProtectedRoute>
+        <MemberLayout>
+          <div className="max-w-4xl mx-auto px-4 py-8">
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+              <p className="text-yellow-600">Artikel tidak ditemukan</p>
+            </div>
+            <div className="mt-4">
+              <Link
+                href="/member/news"
+                className="text-blue-600 hover:text-blue-800 font-medium"
+              >
+                ← Kembali ke Artikel & Informasi
+              </Link>
+            </div>
+          </div>
+        </MemberLayout>
+      </ProtectedRoute>
     );
   }
 
   return (
-    <div className="space-y-6">
-      {/* Back Link */}
-      <div>
-        <Link 
-          href="/member/news" 
-          className="inline-flex items-center text-sm text-gray-500 hover:text-gray-700"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-          </svg>
-          Back to News
-        </Link>
-      </div>
-      
-      {/* Article Content */}
-      <div className="bg-white shadow rounded-lg overflow-hidden">
-        {/* Article Header */}
-        {article.image_url && (
-          <div className="h-64 md:h-96 overflow-hidden">
-            <img 
-              src={article.image_url} 
-              alt={article.title} 
-              className="w-full h-full object-cover"
+    <ProtectedRoute>
+      <MemberLayout>
+        <div className="max-w-4xl mx-auto px-4 py-8">
+          {/* Navigation */}
+          <div className="mb-6">
+            <Link
+              href="/member/news"
+              className="text-blue-600 hover:text-blue-800 font-medium"
+            >
+              ← Kembali ke Artikel & Informasi
+            </Link>
+          </div>
+
+          {/* Article Header */}
+          <div className="bg-white rounded-lg shadow-md overflow-hidden mb-8">
+            {article.image_url && (
+              <div className="aspect-video relative">
+                <img
+                  src={resolveImageUrl(article.image_url) || ''}
+                  alt={article.title}
+                  className="w-full h-full object-cover"
+                  onError={(e) => handleImageError(e)}
+                  onLoad={() => {
+                    console.log('Detail image loaded successfully:', article.image_url);
+                  }}
+                />
+              </div>
+            )}
+            
+            <div className="p-8">
+              <div className="flex items-center text-sm text-gray-500 mb-4">
+                <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs font-medium mr-4">
+                  {article.category}
+                </span>
+                <span>
+                  {new Date(article.published_at).toLocaleDateString('id-ID', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric'
+                  })}
+                </span>
+                <span className="mx-2">•</span>
+                <span>{article.view_count} views</span>
+              </div>
+              
+              <h1 className="text-3xl font-bold text-gray-900 mb-4">
+                {article.title}
+              </h1>
+              
+              <div className="flex items-center text-sm text-gray-600 mb-6">
+                <span>Oleh: {article.author.first_name} {article.author.last_name}</span>
+              </div>
+              
+              {article.summary && (
+                <div className="bg-gray-50 border-l-4 border-blue-500 p-4 mb-6">
+                  <p className="text-gray-700 font-medium">{article.summary}</p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Article Content */}
+          <div className="bg-white rounded-lg shadow-md p-8">
+            <div 
+              className="prose prose-lg max-w-none"
+              dangerouslySetInnerHTML={{
+                __html: DOMPurify.sanitize(article.content)
+              }}
             />
           </div>
-        )}
-        
-        <div className="p-6 md:p-8">
-          {/* Category and Date */}
-          <div className="flex flex-wrap items-center text-sm text-gray-500 mb-4">
-            <span className="inline-block px-2 py-1 text-xs font-semibold text-primary bg-primary-light rounded-full capitalize mr-3">
-              {article.category}
-            </span>
-            <span>{formatDate(article.published_at)}</span>
-            {author && (
-              <>
-                <span className="mx-2">•</span>
-                <span>By {author.first_name} {author.last_name}</span>
-              </>
-            )}
-          </div>
-          
-          {/* Title */}
-          <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-4">{article.title}</h1>
-          
-          {/* Summary */}
-          {article.summary && (
-            <p className="text-lg text-gray-600 mb-6 font-medium">{article.summary}</p>
-          )}
-          
-          {/* Content */}
-          <div className="prose prose-lg max-w-none">
-            {article.content.split('\n').map((paragraph: string, index: number) => (
-              <p key={index} className="mb-4">{paragraph}</p>
-            ))}
+
+          {/* Navigation Footer */}
+          <div className="mt-8 text-center">
+            <Link
+              href="/member/news"
+              className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 transition-colors"
+            >
+              Lihat Artikel Lainnya
+            </Link>
           </div>
         </div>
-      </div>
-      
-      {/* Related Articles */}
-      {relatedArticles.length > 0 && (
-        <div className="bg-white shadow rounded-lg p-6">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">Related Articles</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {relatedArticles.map((relatedArticle) => (
-              <div key={relatedArticle.id} className="border border-gray-200 rounded-lg overflow-hidden">
-                {relatedArticle.image_url ? (
-                  <div className="h-40 overflow-hidden">
-                    <img 
-                      src={relatedArticle.image_url} 
-                      alt={relatedArticle.title} 
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                ) : (
-                  <div className="h-40 bg-gray-100 flex items-center justify-center">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                    </svg>
-                  </div>
-                )}
-                <div className="p-4">
-                  <p className="text-xs text-gray-500 mb-1">
-                    {formatDate(relatedArticle.published_at)}
-                  </p>
-                  <h3 className="text-md font-medium text-gray-900 mb-2 line-clamp-2">{relatedArticle.title}</h3>
-                  {relatedArticle.summary && (
-                    <p className="text-sm text-gray-500 mb-3 line-clamp-2">{relatedArticle.summary}</p>
-                  )}
-                  <Link 
-                    href={`/member/news/${relatedArticle.id}`} 
-                    className="text-sm text-primary hover:text-primary-dark font-medium"
-                  >
-                    Read More →
-                  </Link>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-    </div>
+      </MemberLayout>
+    </ProtectedRoute>
   );
 }

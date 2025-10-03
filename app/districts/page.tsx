@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { getSupabaseClient } from '../lib/supabase';
+import { apiClient } from '../lib/api-client';
 import Layout from '../components/layout/Layout';
 import Card from '../components/ui/Card';
 import Button from '../components/ui/Button';
@@ -11,13 +11,23 @@ import Badge from '../components/ui/Badge';
 type District = {
   id: string;
   name: string;
-  leader1_id: string;
-  leader2_id: string;
+  description?: string;
   status: string;
-  leader1_name?: string;
-  leader2_name?: string;
-  cell_group_count?: number;
-  member_count?: number;
+  created_at: string;
+  leader1?: {
+    id: string;
+    first_name: string;
+    last_name: string;
+  } | null;
+  leader2?: {
+    id: string;
+    first_name: string;
+    last_name: string;
+  } | null;
+  _count: {
+    cell_groups: number;
+    members: number;
+  };
 };
 
 export default function DistrictsPage() {
@@ -28,97 +38,21 @@ export default function DistrictsPage() {
   useEffect(() => {
     const fetchDistricts = async () => {
       try {
-        const supabase = getSupabaseClient();
+        setLoading(true);
+        setError(null);
 
-        // Fetch districts
-        const { data: districtsData, error: districtsError } = await supabase
-          .from('districts')
-          .select('*')
-          .order('name', { ascending: true });
+        // Fetch districts from API
+        const response = await apiClient.getDistricts();
 
-        if (districtsError) throw districtsError;
+        if (!response.success) {
+          throw new Error(response.error?.message || 'Failed to fetch districts');
+        }
 
-        if (districtsData) {
-          // Process each district to get leader names and counts
-          const processedDistricts = await Promise.all(districtsData.map(async (district) => {
-            let leader1Name = '';
-            let leader2Name = '';
-
-            // Get leader1 name if leader1_id exists
-            if (district.leader1_id) {
-              const { data: leader1Data } = await supabase
-                .from('members')
-                .select('first_name, last_name')
-                .eq('id', district.leader1_id)
-                .single();
-
-              if (leader1Data) {
-                leader1Name = `${leader1Data.first_name} ${leader1Data.last_name}`;
-              }
-            }
-
-            // Get leader2 name if leader2_id exists
-            if (district.leader2_id) {
-              const { data: leader2Data } = await supabase
-                .from('members')
-                .select('first_name, last_name')
-                .eq('id', district.leader2_id)
-                .single();
-
-              if (leader2Data) {
-                leader2Name = `${leader2Data.first_name} ${leader2Data.last_name}`;
-              }
-            }
-
-            // Get cell group count
-            const { count: cellGroupCount, error: cellGroupError } = await supabase
-              .from('cell_groups')
-              .select('*', { count: 'exact', head: true })
-              .eq('district_id', district.id);
-
-            if (cellGroupError) {
-              console.error('Error fetching cell group count:', cellGroupError);
-            }
-
-            // Get member count (sum of all members in cell groups of this district)
-            let memberCount = 0;
-
-            // First get all cell groups in this district
-            const { data: cellGroups } = await supabase
-              .from('cell_groups')
-              .select('id')
-              .eq('district_id', district.id);
-
-            if (cellGroups && cellGroups.length > 0) {
-              // For each cell group, count members
-              const memberCounts = await Promise.all(cellGroups.map(async (group) => {
-                const { count, error } = await supabase
-                  .from('cell_group_members')
-                  .select('*', { count: 'exact', head: true })
-                  .eq('cell_group_id', group.id);
-
-                return count || 0;
-              }));
-
-              // Sum up all member counts
-              memberCount = memberCounts.reduce((sum, count) => sum + count, 0);
-            }
-
-            return {
-              ...district,
-              leader1_name: leader1Name,
-              leader2_name: leader2Name,
-              cell_group_count: cellGroupCount || 0,
-              member_count: memberCount
-            };
-          }));
-
-          setDistricts(processedDistricts);
-        } else {
-          setDistricts([]);
+        if (response.data) {
+          setDistricts(response.data);
         }
       } catch (error: any) {
-
+        console.error('Error fetching districts:', error);
         setError(error.message || 'Failed to fetch districts');
       } finally {
         setLoading(false);
@@ -173,20 +107,20 @@ export default function DistrictsPage() {
                 <div>
                   <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">District Leaders</h3>
                   <div className="mt-1 space-y-1 text-gray-700 dark:text-gray-300">
-                    <p>{district.leader1_name || 'No primary leader assigned'}</p>
-                    <p>{district.leader2_name || 'No assistant leader assigned'}</p>
+                    <p>{district.leader1 ? `${district.leader1.first_name} ${district.leader1.last_name}` : 'No primary leader assigned'}</p>
+                    <p>{district.leader2 ? `${district.leader2.first_name} ${district.leader2.last_name}` : 'No assistant leader assigned'}</p>
                   </div>
                 </div>
 
                 <div className="flex justify-between">
                   <div>
                     <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">Cell Groups</h3>
-                    <p className="mt-1 text-2xl font-bold text-brand-500 dark:text-brand-400">{district.cell_group_count}</p>
+                    <p className="mt-1 text-2xl font-bold text-brand-500 dark:text-brand-400">{district._count.cell_groups}</p>
                   </div>
 
                   <div>
                     <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">Members</h3>
-                    <p className="mt-1 text-2xl font-bold text-brand-500 dark:text-brand-400">{district.member_count}</p>
+                    <p className="mt-1 text-2xl font-bold text-brand-500 dark:text-brand-400">{district._count.members}</p>
                   </div>
                 </div>
               </div>

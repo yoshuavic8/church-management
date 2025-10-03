@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { getSupabaseClient } from '../lib/supabase';
+import { apiClient } from '../lib/api-client';
 
 type District = {
   id: string;
@@ -47,43 +47,32 @@ export default function CellGroupForm({ initialData = {}, mode }: CellGroupFormP
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const supabase = getSupabaseClient();
-
+        setLoading(true);
+        
         // Fetch districts
-        const { data: districtsData, error: districtsError } = await supabase
-          .from('districts')
-          .select('id, name')
-          .order('name', { ascending: true });
-
-        if (districtsError) throw districtsError;
+        const districtsResponse = await apiClient.getDistricts();
+        if (districtsResponse.success && districtsResponse.data) {
+          setDistricts(districtsResponse.data);
+        }
 
         // Fetch members
-        const { data: membersData, error: membersError } = await supabase
-          .from('members')
-          .select('id, first_name, last_name')
-          .order('last_name', { ascending: true });
-
-        if (membersError) throw membersError;
-
-        setDistricts(districtsData || []);
-        setMembers(membersData || []);
+        const membersResponse = await apiClient.getMembers();
+        if (membersResponse.success && membersResponse.data) {
+          setMembers(membersResponse.data);
+        }
 
         // If editing, fetch current leaders
         if (mode === 'edit' && initialData.id) {
-          const { data: leadersData, error: leadersError } = await supabase
-            .from('cell_group_leaders')
-            .select('member_id')
-            .eq('cell_group_id', initialData.id);
-
-          if (leadersError) throw leadersError;
-
-          if (leadersData) {
-            setSelectedLeaders(leadersData.map(leader => leader.member_id));
+          const cellGroupResponse = await apiClient.getCellGroup(initialData.id);
+          if (cellGroupResponse.success && cellGroupResponse.data?.leaders) {
+            setSelectedLeaders(cellGroupResponse.data.leaders.map((leader: any) => leader.member_id));
           }
         }
+        
+        setLoading(false);
       } catch (error: any) {
-
         setError(error.message || 'Failed to load form data');
+        setLoading(false);
       }
     };
 
@@ -106,76 +95,36 @@ export default function CellGroupForm({ initialData = {}, mode }: CellGroupFormP
     setError(null);
 
     try {
-      const supabase = getSupabaseClient();
-
       if (mode === 'add') {
-        // Insert new cell group
-        const { data: cellGroupData, error: cellGroupError } = await supabase
-          .from('cell_groups')
-          .insert([formData])
-          .select();
-
-        if (cellGroupError) throw cellGroupError;
-
-        if (cellGroupData && cellGroupData.length > 0) {
-          const cellGroupId = cellGroupData[0].id;
-
-          // Add leaders
-          if (selectedLeaders.length > 0) {
-            const leaderEntries = selectedLeaders.map(memberId => ({
-              cell_group_id: cellGroupId,
-              member_id: memberId,
-              role: 'leader'
-            }));
-
-            const { error: leadersError } = await supabase
-              .from('cell_group_leaders')
-              .insert(leaderEntries);
-
-            if (leadersError) throw leadersError;
-          }
+        // Create new cell group with leaders
+        const cellGroupData = {
+          ...formData,
+          leaders: selectedLeaders
+        };
+        
+        const response = await apiClient.createCellGroup(cellGroupData);
+        
+        if (!response.success) {
+          throw new Error(response.error?.message || 'Failed to create cell group');
         }
-
-
       } else {
         // Update existing cell group
-        const { error: cellGroupError } = await supabase
-          .from('cell_groups')
-          .update(formData)
-          .eq('id', initialData.id!);
-
-        if (cellGroupError) throw cellGroupError;
-
-        // Delete existing leaders
-        const { error: deleteLeadersError } = await supabase
-          .from('cell_group_leaders')
-          .delete()
-          .eq('cell_group_id', initialData.id!);
-
-        if (deleteLeadersError) throw deleteLeadersError;
-
-        // Add new leaders
-        if (selectedLeaders.length > 0) {
-          const leaderEntries = selectedLeaders.map(memberId => ({
-            cell_group_id: initialData.id!,
-            member_id: memberId,
-            role: 'leader'
-          }));
-
-          const { error: leadersError } = await supabase
-            .from('cell_group_leaders')
-            .insert(leaderEntries);
-
-          if (leadersError) throw leadersError;
+        const cellGroupData = {
+          ...formData,
+          leaders: selectedLeaders
+        };
+        
+        const response = await apiClient.updateCellGroup(initialData.id!, cellGroupData);
+        
+        if (!response.success) {
+          throw new Error(response.error?.message || 'Failed to update cell group');
         }
-
-
       }
 
       // Redirect to cell groups list
       router.push('/cell-groups');
     } catch (error: any) {
-      setError(error.message || 'An error occurred');
+      setError(error.message || 'An error occurred while saving the cell group');
     } finally {
       setLoading(false);
     }

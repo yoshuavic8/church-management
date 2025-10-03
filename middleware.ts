@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { createMiddlewareClient } from "@supabase/auth-helpers-nextjs";
 
 export async function middleware(request: NextRequest) {
   // Create the response object
@@ -22,15 +21,7 @@ export async function middleware(request: NextRequest) {
     return res;
   }
 
-  // Create a Supabase client for auth
-  const supabase = createMiddlewareClient({ req: request, res });
-
-  // Refresh session if available
-  await supabase.auth.getSession();
-
-  // We don't block access here - we use client-side protection with ProtectedRoute component
-  // This middleware just ensures the auth session is refreshed
-
+  // No auth middleware needed - authentication handled by backend API
   return res;
 }
 

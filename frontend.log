@@ -1,0 +1,26 @@
+
+> church-management@0.1.0 dev
+> next dev
+
+  ▲ Next.js 14.2.28
+  - Local:        http://localhost:3000
+  - Environments: .env.local
+
+ ✓ Starting...
+ ✓ Ready in 2.5s
+(node:39158) [DEP0060] DeprecationWarning: The `util._extend` API is deprecated. Please use Object.assign() instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+Failed to proxy http://localhost:3001/api/auth/admin/login Error: socket hang up
+    at Socket.socketCloseListener (node:_http_client:491:27)
+    at Socket.emit (node:events:530:35)
+    at TCP.<anonymous> (node:net:351:12) {
+  code: 'ECONNRESET'
+}
+Error: socket hang up
+    at Socket.socketCloseListener (node:_http_client:491:27)
+    at Socket.emit (node:events:530:35)
+    at TCP.<anonymous> (node:net:351:12) {
+  code: 'ECONNRESET'
+}
+ ○ Compiling /_error ...
+ ✓ Compiled /_error in 1905ms (262 modules)

@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { getSupabaseClient } from '../../lib/supabase';
+import { apiClient } from '../../lib/api-client';
 import Header from '../../components/Header';
 
 type District = {
@@ -15,33 +15,44 @@ type District = {
   status: string;
   created_at: string;
   updated_at: string;
-};
-
-type Leader = {
-  id: string;
-  first_name: string;
-  last_name: string;
-  email: string;
-  phone: string | null;
+  leader1?: {
+    id: string;
+    first_name: string;
+    last_name: string;
+    email: string;
+    phone: string | null;
+  } | null;
+  leader2?: {
+    id: string;
+    first_name: string;
+    last_name: string;
+    email: string;
+    phone: string | null;
+  } | null;
+  cell_groups?: CellGroup[];
+  _count?: {
+    cell_groups: number;
+    members: number;
+  };
 };
 
 type CellGroup = {
   id: string;
   name: string;
-  meeting_day: string;
-  meeting_time: string;
-  location: string;
+  meeting_day?: string;
+  meeting_time?: string;
+  location?: string;
   status: string;
-  member_count: number;
+  member_count?: number;
+  _count?: {
+    cell_group_members: number;
+  };
 };
 
 export default function DistrictDetailPage() {
   const { id } = useParams();
   const router = useRouter();
   const [district, setDistrict] = useState<District | null>(null);
-  const [leader1, setLeader1] = useState<Leader | null>(null);
-  const [leader2, setLeader2] = useState<Leader | null>(null);
-  const [cellGroups, setCellGroups] = useState<CellGroup[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -49,83 +60,26 @@ export default function DistrictDetailPage() {
   useEffect(() => {
     const fetchDistrict = async () => {
       try {
-        const supabase = getSupabaseClient();
+        // Fetch district via API
+        const response = await apiClient.getDistrict(id as string);
 
-        // Fetch district
-        const { data: districtData, error: districtError } = await supabase
-          .from('districts')
-          .select('*')
-          .eq('id', id as string)
-          .single();
-
-        if (districtError) throw districtError;
-
-        setDistrict(districtData);
-
-        // Fetch leader 1 if exists
-        if (districtData.leader1_id) {
-          const { data: leader1Data, error: leader1Error } = await supabase
-            .from('members')
-            .select('id, first_name, last_name, email, phone')
-            .eq('id', districtData.leader1_id)
-            .single();
-
-          if (leader1Error) {
-            
-          } else {
-            setLeader1(leader1Data);
-          }
+        if (!response.success) {
+          throw new Error(response.error?.message || 'Failed to fetch district data');
         }
 
-        // Fetch leader 2 if exists
-        if (districtData.leader2_id) {
-          const { data: leader2Data, error: leader2Error } = await supabase
-            .from('members')
-            .select('id, first_name, last_name, email, phone')
-            .eq('id', districtData.leader2_id)
-            .single();
-
-          if (leader2Error) {
-            
-          } else {
-            setLeader2(leader2Data);
-          }
-        }
-
-        // Fetch cell groups in this district
-        const { data: cellGroupsData, error: cellGroupsError } = await supabase
-          .from('cell_groups')
-          .select('id, name, meeting_day, meeting_time, location, status')
-          .eq('district_id', id as string)
-          .order('name', { ascending: true });
-
-        if (cellGroupsError) throw cellGroupsError;
-
-        // For each cell group, get the member count
-        const cellGroupsWithCounts = await Promise.all((cellGroupsData || []).map(async (group) => {
-          const { count, error } = await supabase
-            .from('cell_group_members')
-            .select('*', { count: 'exact', head: true })
-            .eq('cell_group_id', group.id);
-
-          if (error) throw error;
-
-          return {
-            ...group,
-            member_count: count || 0
-          };
-        }));
-
-        setCellGroups(cellGroupsWithCounts);
-      } catch (error: any) {
+        setDistrict(response.data);
         
+      } catch (error: any) {
+        console.error('Error fetching district data:', error);
         setError(error.message || 'Failed to fetch district data');
       } finally {
         setLoading(false);
       }
     };
 
-    fetchDistrict();
+    if (id) {
+      fetchDistrict();
+    }
   }, [id]);
 
   // Handler untuk menghapus cell group
@@ -133,13 +87,9 @@ export default function DistrictDetailPage() {
     if (!confirm('Apakah Anda yakin ingin menghapus cell group ini dari district ini?')) return;
     setDeletingId(cellGroupId);
     try {
-      const supabase = getSupabaseClient();
-      const { error } = await supabase
-        .from('cell_groups')
-        .update({ district_id: null })
-        .eq('id', cellGroupId);
-      if (error) throw error;
-      setCellGroups(cellGroups.filter((g) => g.id !== cellGroupId));
+      // TODO: Implement API call to remove cell group from district
+      console.log('Removing cell group:', cellGroupId);
+      alert('Feature not implemented yet');
     } catch (err: any) {
       alert(err.message || 'Gagal menghapus cell group dari district');
     } finally {
@@ -191,6 +141,8 @@ export default function DistrictDetailPage() {
     </Link>
   );
 
+  const cellGroups = district.cell_groups || [];
+
   return (
     <div>
       <Header
@@ -219,15 +171,15 @@ export default function DistrictDetailPage() {
 
               <div>
                 <h3 className="text-sm font-medium text-gray-500">Cell Groups</h3>
-                <p className="mt-1">{cellGroups.length}</p>
+                <p className="mt-1">{district._count?.cell_groups || cellGroups.length}</p>
               </div>
 
               <div>
                 <h3 className="text-sm font-medium text-gray-500">Leader 1</h3>
                 <p className="mt-1">
-                  {leader1 ? (
-                    <Link href={`/members/${leader1.id}`} className="text-primary hover:underline">
-                      {leader1.first_name} {leader1.last_name}
+                  {district.leader1 ? (
+                    <Link href={`/members/${district.leader1.id}`} className="text-primary hover:underline">
+                      {district.leader1.first_name} {district.leader1.last_name}
                     </Link>
                   ) : (
                     'Not assigned'
@@ -238,15 +190,22 @@ export default function DistrictDetailPage() {
               <div>
                 <h3 className="text-sm font-medium text-gray-500">Leader 2</h3>
                 <p className="mt-1">
-                  {leader2 ? (
-                    <Link href={`/members/${leader2.id}`} className="text-primary hover:underline">
-                      {leader2.first_name} {leader2.last_name}
+                  {district.leader2 ? (
+                    <Link href={`/members/${district.leader2.id}`} className="text-primary hover:underline">
+                      {district.leader2.first_name} {district.leader2.last_name}
                     </Link>
                   ) : (
                     'Not assigned'
                   )}
                 </p>
               </div>
+
+              {district.description && (
+                <div className="md:col-span-2">
+                  <h3 className="text-sm font-medium text-gray-500">Description</h3>
+                  <p className="mt-1">{district.description}</p>
+                </div>
+              )}
             </div>
           </div>
 
@@ -269,12 +228,16 @@ export default function DistrictDetailPage() {
                       className="block"
                     >
                       <h3 className="font-semibold mb-2">{group.name}</h3>
-                      <p className="text-sm text-gray-600">
-                        {group.meeting_day} at {formatTime(group.meeting_time)}
-                      </p>
-                      <p className="text-sm text-gray-600 mt-1">{group.location}</p>
+                      {group.meeting_day && (
+                        <p className="text-sm text-gray-600">
+                          {group.meeting_day} at {formatTime(group.meeting_time || '')}
+                        </p>
+                      )}
+                      {group.location && (
+                        <p className="text-sm text-gray-600 mt-1">{group.location}</p>
+                      )}
                       <p className="text-sm text-gray-600 mt-1">
-                        {group.member_count} members
+                        {group.member_count || group._count?.cell_group_members || 0} members
                       </p>
                       <span className={`mt-2 inline-block px-2 py-1 rounded-full text-xs ${
                         group.status === 'active'

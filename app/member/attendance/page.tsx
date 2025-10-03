@@ -1,367 +1,488 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { getSupabaseClient } from '../../lib/supabase';
+import MemberLayout from '../../components/layout/MemberLayout';
+import { apiClient } from '../../lib/api-client';
+import ProtectedRoute from '../../components/ProtectedRoute';
+import { useAuth } from '../../contexts/AuthContext';
 
-export default function MemberAttendance() {
-  const [loading, setLoading] = useState(true);
-  const [records, setRecords] = useState<any[]>([]);
-  const [stats, setStats] = useState({
-    total: 0,
-    present: 0,
-    absent: 0,
-    late: 0,
-    percentage: 0
+// Force dynamic rendering
+export const dynamic = 'force-dynamic';
+
+type MemberAttendance = {
+  id: string;
+  event_date: string;
+  event_type: string;
+  status: string;
+  topic?: string;
+  location?: string;
+  meeting?: {
+    meeting_date: string;
+    event_category: string;
+    topic: string;
+    location: string;
+  };
+};
+
+type AttendanceStats = {
+  totalMeetings: number;
+  presentCount: number;
+  lateCount: number;
+  absentCount: number;
+  attendanceRate: number;
+};
+
+function MemberAttendanceContent() {
+  const { user } = useAuth();
+  const [attendanceHistory, setAttendanceHistory] = useState<MemberAttendance[]>([]);
+  const [attendanceStats, setAttendanceStats] = useState<AttendanceStats>({
+    totalMeetings: 0,
+    presentCount: 0,
+    lateCount: 0,
+    absentCount: 0,
+    attendanceRate: 0
   });
-  const [timeFilter, setTimeFilter] = useState<'all' | 'month' | 'quarter' | 'year'>('month');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
-  const [recordsPerPage, setRecordsPerPage] = useState(10);
+  const [totalPages, setTotalPages] = useState(1);
+  const [filterType, setFilterType] = useState<string>('');
+  const [filterStatus, setFilterStatus] = useState<string>('');
+
+  const itemsPerPage = 15;
 
   useEffect(() => {
-    fetchAttendanceRecords();
-  }, [timeFilter]);
+    const fetchAttendanceData = async () => {
+      try {
+        setLoading(true);
 
-  const fetchAttendanceRecords = async () => {
-    try {
-      setLoading(true);
-      const supabase = getSupabaseClient();
+        if (!user) {
+          throw new Error('Authentication required. Please login.');
+        }
 
-      // Get current user
-      const { data: { user } } = await supabase.auth.getUser();
+        // Build query params
+        const params: any = { 
+          page: currentPage, 
+          limit: itemsPerPage,
+          timeFilter: 'all' // Get all attendance data regardless of time
+        };
 
-      if (!user) {
-        throw new Error('User not authenticated');
+        if (filterType) params.event_category = filterType;
+        if (filterStatus) params.status = filterStatus;
+
+        // Fetch attendance history
+        const response = await apiClient.getMemberAttendance(user.id, params);
+        
+        // Debug: log the response
+        console.log('Member attendance page response:', response);
+        
+        // Handle different response structures safely
+        let attendanceData: any[] = [];
+        const responseData = response.data as any;
+        
+        if (Array.isArray(responseData)) {
+          attendanceData = responseData;
+        } else if (responseData && Array.isArray(responseData.records)) {
+          attendanceData = responseData.records;
+        }
+        
+        console.log('Member attendance page processed data:', attendanceData);
+
+        setAttendanceHistory(attendanceData);
+        setTotalPages(response.pagination?.totalPages || 1);
+
+        // Calculate statistics from all data (not just current page)
+        const allDataResponse = await apiClient.getMemberAttendance(user.id, { 
+          page: 1, 
+          limit: 1000,
+          timeFilter: 'all' // Get all attendance data for statistics
+        });
+        const allResponseData = allDataResponse.data as any;
+        
+        let allData: any[] = [];
+        if (Array.isArray(allResponseData)) {
+          allData = allResponseData;
+        } else if (allResponseData && Array.isArray(allResponseData.records)) {
+          allData = allResponseData.records;
+        }
+        
+        const totalMeetings = allData.length;
+        const presentCount = allData.filter((a: any) => a.status === 'present').length;
+        const lateCount = allData.filter((a: any) => a.status === 'late').length;
+        const absentCount = allData.filter((a: any) => a.status === 'absent').length;
+        const attendanceRate = totalMeetings > 0 ? ((presentCount + lateCount) / totalMeetings) * 100 : 0;
+
+        setAttendanceStats({
+          totalMeetings,
+          presentCount,
+          lateCount,
+          absentCount,
+          attendanceRate
+        });
+
+        setLoading(false);
+      } catch (error: any) {
+        setError(error.message || 'Failed to fetch attendance data');
+        setLoading(false);
       }
+    };
 
-      // Calculate date range based on filter
-      const today = new Date();
-      let startDate = new Date();
+    if (user) {
+      fetchAttendanceData();
+    }
+  }, [user, currentPage, filterType, filterStatus]);
 
-      if (timeFilter === 'month') {
-        startDate.setMonth(today.getMonth() - 1);
-      } else if (timeFilter === 'quarter') {
-        startDate.setMonth(today.getMonth() - 3);
-      } else if (timeFilter === 'year') {
-        startDate.setFullYear(today.getFullYear() - 1);
-      } else {
-        // All time - set to a far past date
-        startDate = new Date(2000, 0, 1);
-      }
-
-      // Fetch attendance records
-      const { data, error } = await supabase
-        .from('attendance_participants')
-        .select(`
-          id,
-          status,
-          meeting:meeting_id (
-            id,
-            meeting_date,
-            meeting_type,
-            topic,
-            event_category,
-            cell_group:cell_group_id (name),
-            ministry:ministry_id (name)
-          )
-        `)
-        .eq('member_id', user.id)
-        .order('id', { ascending: false });
-
-      if (error) throw error;
-
-      // Filter records by date
-      const filteredData = data.filter((record: any) => {
-        const meetingDate = new Date(record.meeting.meeting_date);
-        return meetingDate >= startDate && meetingDate <= today;
-      });
-
-      // Process records
-      const processedRecords = filteredData.map((record: any) => ({
-        id: record.id,
-        meeting_id: record.meeting.id,
-        meeting_date: record.meeting.meeting_date,
-        meeting_type: record.meeting.meeting_type,
-        topic: record.meeting.topic,
-        event_category: record.meeting.event_category,
-        context_name: getContextName(record.meeting),
-        status: record.status
-      }));
-
-      setRecords(processedRecords);
-
-      // Calculate statistics
-      const total = processedRecords.length;
-      const present = processedRecords.filter(r => r.status === 'present').length;
-      const absent = processedRecords.filter(r => r.status === 'absent').length;
-      const late = processedRecords.filter(r => r.status === 'late').length;
-      const percentage = total > 0 ? Math.round((present / total) * 100) : 0;
-
-      setStats({
-        total,
-        present,
-        absent,
-        late,
-        percentage
-      });
-
-    } catch (error) {
-
-    } finally {
-      setLoading(false);
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'present':
+        return 'bg-green-100 text-green-800';
+      case 'late':
+        return 'bg-yellow-100 text-yellow-800';
+      case 'absent':
+        return 'bg-red-100 text-red-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
     }
   };
 
-  const getContextName = (meeting: any) => {
-    if (meeting.event_category === 'cell_group' && meeting.cell_group) {
-      return meeting.cell_group.name;
-    } else if (meeting.event_category === 'ministry' && meeting.ministry) {
-      return meeting.ministry.name;
-    } else {
-      return meeting.event_category.replace('_', ' ');
+  const getStatusText = (status: string) => {
+    switch (status) {
+      case 'present':
+        return 'Hadir';
+      case 'late':
+        return 'Terlambat';
+      case 'absent':
+        return 'Tidak Hadir';
+      default:
+        return status;
     }
   };
 
-  const getMeetingTypeLabel = (type: string) => {
-    const labels: Record<string, string> = {
-      'regular': 'Regular Meeting',
-      'special': 'Special Meeting',
-      'outreach': 'Outreach',
-      'prayer': 'Prayer Meeting',
-      'service': 'Church Service',
-      'training': 'Training',
-      'other': 'Other'
-    };
-    return labels[type] || type.replace('_', ' ');
+  const getEventTypeText = (eventType: string) => {
+    switch (eventType) {
+      case 'cell_group':
+        return 'Cell Group';
+      case 'sunday_service':
+        return 'Ibadah Minggu';
+      case 'prayer_meeting':
+        return 'Doa Bersama';
+      case 'youth_service':
+        return 'Ibadah Pemuda';
+      case 'special_service':
+        return 'Ibadah Khusus';
+      default:
+        return eventType;
+    }
   };
 
-  const getStatusLabel = (status: string) => {
-    const labels: Record<string, { label: string, color: string }> = {
-      'present': { label: 'Present', color: 'bg-green-100 text-green-800' },
-      'absent': { label: 'Absent', color: 'bg-red-100 text-red-800' },
-      'late': { label: 'Late', color: 'bg-yellow-100 text-yellow-800' },
-      'excused': { label: 'Excused', color: 'bg-blue-100 text-blue-800' }
-    };
-    return labels[status] || { label: status, color: 'bg-gray-100 text-gray-800' };
-  };
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading attendance data...</p>
+        </div>
+      </div>
+    );
+  }
 
-  // Pagination
-  const indexOfLastRecord = currentPage * recordsPerPage;
-  const indexOfFirstRecord = indexOfLastRecord - recordsPerPage;
-  const currentRecords = records.slice(indexOfFirstRecord, indexOfLastRecord);
-  const totalPages = Math.ceil(records.length / recordsPerPage);
-
-  const paginate = (pageNumber: number) => setCurrentPage(pageNumber);
+  if (error) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+            <p className="font-bold">Error loading attendance data</p>
+            <p className="text-sm">{error}</p>
+          </div>
+          <Link 
+            href="/member/dashboard"
+            className="mt-4 inline-block bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700"
+          >
+            Back to Dashboard
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div className="bg-white shadow rounded-lg p-6">
-        <h2 className="text-xl font-semibold text-gray-900 mb-4">Your Attendance History</h2>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Riwayat Kehadiran</h1>
+            <p className="text-gray-600">Lihat catatan kehadiran Anda dalam berbagai acara gereja</p>
+          </div>
+          <Link
+            href="/member/dashboard"
+            className="bg-gray-100 hover:bg-gray-200 text-gray-800 px-4 py-2 rounded-lg transition-colors"
+          >
+            ← Kembali ke Dashboard
+          </Link>
+        </div>
+      </div>
 
-        {/* Statistics */}
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
-          <div className="bg-gray-50 p-4 rounded-lg text-center">
-            <p className="text-sm text-gray-500">Total Meetings</p>
-            <p className="text-2xl font-bold">{stats.total}</p>
-          </div>
-          <div className="bg-green-50 p-4 rounded-lg text-center">
-            <p className="text-sm text-green-600">Present</p>
-            <p className="text-2xl font-bold text-green-700">{stats.present}</p>
-            <p className="text-xs text-green-600">
-              {stats.total > 0 ? Math.round((stats.present / stats.total) * 100) : 0}%
-            </p>
-          </div>
-          <div className="bg-red-50 p-4 rounded-lg text-center">
-            <p className="text-sm text-red-600">Absent</p>
-            <p className="text-2xl font-bold text-red-700">{stats.absent}</p>
-            <p className="text-xs text-red-600">
-              {stats.total > 0 ? Math.round((stats.absent / stats.total) * 100) : 0}%
-            </p>
-          </div>
-          <div className="bg-yellow-50 p-4 rounded-lg text-center">
-            <p className="text-sm text-yellow-600">Late</p>
-            <p className="text-2xl font-bold text-yellow-700">{stats.late}</p>
-            <p className="text-xs text-yellow-600">
-              {stats.total > 0 ? Math.round((stats.late / stats.total) * 100) : 0}%
-            </p>
-          </div>
-          <div className="bg-blue-50 p-4 rounded-lg text-center">
-            <p className="text-sm text-blue-600">Attendance Rate</p>
-            <p className="text-2xl font-bold text-blue-700">{stats.percentage}%</p>
+      {/* Statistics Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <div className="bg-white p-6 rounded-lg shadow">
+          <div className="flex items-center">
+            <div className="p-2 bg-blue-100 rounded-lg">
+              <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+              </svg>
+            </div>
+            <div className="ml-4">
+              <p className="text-sm font-medium text-gray-600">Total Pertemuan</p>
+              <p className="text-2xl font-semibold text-gray-900">{attendanceStats.totalMeetings}</p>
+            </div>
           </div>
         </div>
 
-        {/* Time Filter */}
-        <div className="mb-6">
-          <h3 className="text-sm font-medium text-gray-700 mb-2">Time Period</h3>
-          <div className="flex flex-wrap gap-2">
-            <button
-              onClick={() => setTimeFilter('month')}
-              className={`px-3 py-1 rounded-md ${timeFilter === 'month' ? 'bg-primary text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
-            >
-              Last Month
-            </button>
-            <button
-              onClick={() => setTimeFilter('quarter')}
-              className={`px-3 py-1 rounded-md ${timeFilter === 'quarter' ? 'bg-primary text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
-            >
-              Last 3 Months
-            </button>
-            <button
-              onClick={() => setTimeFilter('year')}
-              className={`px-3 py-1 rounded-md ${timeFilter === 'year' ? 'bg-primary text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
-            >
-              Last Year
-            </button>
-            <button
-              onClick={() => setTimeFilter('all')}
-              className={`px-3 py-1 rounded-md ${timeFilter === 'all' ? 'bg-primary text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
-            >
-              All Time
-            </button>
+        <div className="bg-white p-6 rounded-lg shadow">
+          <div className="flex items-center">
+            <div className="p-2 bg-green-100 rounded-lg">
+              <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <div className="ml-4">
+              <p className="text-sm font-medium text-gray-600">Hadir</p>
+              <p className="text-2xl font-semibold text-green-600">{attendanceStats.presentCount}</p>
+            </div>
           </div>
         </div>
 
-        {/* Attendance Records */}
-        {loading ? (
-          <div className="flex justify-center items-center h-64">
-            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+        <div className="bg-white p-6 rounded-lg shadow">
+          <div className="flex items-center">
+            <div className="p-2 bg-yellow-100 rounded-lg">
+              <svg className="w-6 h-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <div className="ml-4">
+              <p className="text-sm font-medium text-gray-600">Terlambat</p>
+              <p className="text-2xl font-semibold text-yellow-600">{attendanceStats.lateCount}</p>
+            </div>
           </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="min-w-full bg-white rounded-lg overflow-hidden">
-              <thead className="bg-gray-100">
-                <tr>
-                  <th className="py-3 px-4 text-left">Date</th>
-                  <th className="py-3 px-4 text-left">Context</th>
-                  <th className="py-3 px-4 text-left">Type</th>
-                  <th className="py-3 px-4 text-left">Status</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200">
-                {currentRecords.length > 0 ? (
-                  currentRecords.map((record) => {
-                    const statusInfo = getStatusLabel(record.status);
-                    return (
-                      <tr key={record.id} className="hover:bg-gray-50">
-                        <td className="py-3 px-4">
-                          {new Date(record.meeting_date).toLocaleDateString()}
-                        </td>
-                        <td className="py-3 px-4">
-                          <div className="font-medium">{record.context_name}</div>
-                          {record.topic && (
-                            <div className="text-xs text-gray-500">{record.topic}</div>
-                          )}
-                        </td>
-                        <td className="py-3 px-4">{getMeetingTypeLabel(record.meeting_type)}</td>
-                        <td className="py-3 px-4">
-                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusInfo.color}`}>
-                            {statusInfo.label}
-                          </span>
-                        </td>
-                      </tr>
-                    );
-                  })
-                ) : (
-                  <tr>
-                    <td colSpan={4} className="py-8 px-4 text-center text-gray-500">
-                      <div className="flex flex-col items-center">
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 text-gray-300 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                        </svg>
-                        <p className="text-lg font-medium mb-2">No attendance records found</p>
-                        <p className="text-sm text-gray-400 mb-4">Try selecting a different time period</p>
-                      </div>
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
+        </div>
 
-            {/* Pagination */}
-            {records.length > 0 && (
-              <div className="mt-6 flex flex-col sm:flex-row justify-between items-center border-t border-gray-200 pt-4">
-                <div className="mb-4 sm:mb-0">
-                  <span className="text-sm text-gray-700">
-                    Showing <span className="font-medium">{indexOfFirstRecord + 1}</span> to{' '}
-                    <span className="font-medium">
-                      {Math.min(indexOfLastRecord, records.length)}
-                    </span>{' '}
-                    of <span className="font-medium">{records.length}</span> results
+        <div className="bg-white p-6 rounded-lg shadow">
+          <div className="flex items-center">
+            <div className="p-2 bg-indigo-100 rounded-lg">
+              <div className="w-6 h-6 relative">
+                <svg className="w-6 h-6 text-indigo-600" viewBox="0 0 36 36">
+                  <path
+                    d="M18 2.0845
+                      a 15.9155 15.9155 0 0 1 0 31.831
+                      a 15.9155 15.9155 0 0 1 0 -31.831"
+                    fill="none"
+                    stroke="#e5e7eb"
+                    strokeWidth="3"
+                  />
+                  <path
+                    d="M18 2.0845
+                      a 15.9155 15.9155 0 0 1 0 31.831
+                      a 15.9155 15.9155 0 0 1 0 -31.831"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="3"
+                    strokeDasharray={`${attendanceStats.attendanceRate}, 100`}
+                  />
+                </svg>
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <span className="text-xs font-semibold text-indigo-600">
+                    {Math.round(attendanceStats.attendanceRate)}%
                   </span>
                 </div>
+              </div>
+            </div>
+            <div className="ml-4">
+              <p className="text-sm font-medium text-gray-600">Tingkat Kehadiran</p>
+              <p className="text-2xl font-semibold text-indigo-600">
+                {Math.round(attendanceStats.attendanceRate)}%
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
 
-                <div className="flex items-center space-x-2">
-                  <select
-                    className="input-field py-1 px-2 text-sm"
-                    value={recordsPerPage}
-                    onChange={(e) => {
-                      setRecordsPerPage(Number(e.target.value));
-                      setCurrentPage(1); // Reset to first page when changing records per page
-                    }}
-                  >
-                    <option value="5">5 per page</option>
-                    <option value="10">10 per page</option>
-                    <option value="25">25 per page</option>
-                    <option value="50">50 per page</option>
-                  </select>
+      {/* Filters */}
+      <div className="bg-white shadow rounded-lg p-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div>
+            <label htmlFor="eventType" className="block text-sm font-medium text-gray-700">
+              Jenis Acara
+            </label>
+            <select
+              id="eventType"
+              value={filterType}
+              onChange={(e) => {
+                setFilterType(e.target.value);
+                setCurrentPage(1);
+              }}
+              className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 bg-white text-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+            >
+              <option value="">Semua Jenis Acara</option>
+              <option value="cell_group">Cell Group</option>
+              <option value="sunday_service">Ibadah Minggu</option>
+              <option value="prayer_meeting">Doa Bersama</option>
+              <option value="youth_service">Ibadah Pemuda</option>
+              <option value="special_service">Ibadah Khusus</option>
+            </select>
+          </div>
 
-                  <nav className="flex items-center">
+          <div>
+            <label htmlFor="status" className="block text-sm font-medium text-gray-700">
+              Status Kehadiran
+            </label>
+            <select
+              id="status"
+              value={filterStatus}
+              onChange={(e) => {
+                setFilterStatus(e.target.value);
+                setCurrentPage(1);
+              }}
+              className="mt-1 block w-full border border-gray-300 rounded-md px-3 py-2 bg-white text-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+            >
+              <option value="">Semua Status</option>
+              <option value="present">Hadir</option>
+              <option value="late">Terlambat</option>
+              <option value="absent">Tidak Hadir</option>
+            </select>
+          </div>
+
+          <div className="flex items-end">
+            <button
+              onClick={() => {
+                setFilterType('');
+                setFilterStatus('');
+                setCurrentPage(1);
+              }}
+              className="w-full bg-gray-100 hover:bg-gray-200 text-gray-800 px-4 py-2 rounded-md transition-colors"
+            >
+              Reset Filter
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Attendance History */}
+      <div className="bg-white shadow rounded-lg">
+        <div className="px-6 py-4 border-b border-gray-200">
+          <h2 className="text-lg font-semibold text-gray-900">Riwayat Kehadiran</h2>
+        </div>
+        
+        {attendanceHistory.length > 0 ? (
+          <div className="overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Tanggal
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Jenis Acara
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Status
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Topik
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Lokasi
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {attendanceHistory.map((attendance) => (
+                    <tr key={attendance.id} className="hover:bg-gray-50">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {new Date(attendance.meeting?.meeting_date || attendance.event_date).toLocaleDateString('id-ID', {
+                          weekday: 'long',
+                          year: 'numeric',
+                          month: 'long',
+                          day: 'numeric'
+                        })}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {getEventTypeText(attendance.meeting?.event_category || attendance.event_type)}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(attendance.status)}`}>
+                          {getStatusText(attendance.status)}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-sm text-gray-900 max-w-xs truncate">
+                        {attendance.meeting?.topic || attendance.topic || '-'}
+                      </td>
+                      <td className="px-6 py-4 text-sm text-gray-900 max-w-xs truncate">
+                        {attendance.meeting?.location || attendance.location || '-'}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="px-6 py-4 border-t border-gray-200">
+                <div className="flex items-center justify-between">
+                  <div className="text-sm text-gray-700">
+                    Halaman {currentPage} dari {totalPages}
+                  </div>
+                  <div className="flex space-x-2">
                     <button
-                      onClick={() => paginate(Math.max(1, currentPage - 1))}
+                      onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
                       disabled={currentPage === 1}
-                      className={`px-2 py-1 rounded-md ${
-                        currentPage === 1
-                          ? 'text-gray-400 cursor-not-allowed'
-                          : 'text-gray-700 hover:bg-gray-100'
-                      }`}
+                      className="px-3 py-1 border border-gray-300 rounded text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
                     >
-                      &laquo; Prev
+                      ← Sebelumnya
                     </button>
-
-                    <span className="px-3 py-1">
-                      Page {currentPage} of {totalPages}
-                    </span>
-
                     <button
-                      onClick={() => paginate(Math.min(totalPages, currentPage + 1))}
+                      onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
                       disabled={currentPage === totalPages}
-                      className={`px-2 py-1 rounded-md ${
-                        currentPage === totalPages
-                          ? 'text-gray-400 cursor-not-allowed'
-                          : 'text-gray-700 hover:bg-gray-100'
-                      }`}
+                      className="px-3 py-1 border border-gray-300 rounded text-sm disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
                     >
-                      Next &raquo;
+                      Selanjutnya →
                     </button>
-                  </nav>
+                  </div>
                 </div>
               </div>
             )}
           </div>
+        ) : (
+          <div className="px-6 py-12 text-center">
+            <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+            </svg>
+            <h3 className="mt-4 text-lg font-medium text-gray-900">Belum ada riwayat kehadiran</h3>
+            <p className="mt-2 text-sm text-gray-500">
+              Mulai dengan melakukan check-in di pertemuan untuk melihat riwayat kehadiran Anda.
+            </p>
+            <Link
+              href="/self-checkin"
+              className="mt-4 inline-flex items-center px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
+            >
+              Self Check-in
+            </Link>
+          </div>
         )}
       </div>
-
-      {/* Quick Check-in Card */}
-      <div className="bg-white shadow rounded-lg p-6">
-        <div className="flex flex-col md:flex-row md:items-center md:justify-between">
-          <div className="mb-4 md:mb-0">
-            <h2 className="text-lg font-medium text-gray-900">Need to check in?</h2>
-            <p className="text-sm text-gray-500 mt-1">
-              Use our self check-in feature to quickly record your attendance
-            </p>
-          </div>
-          <Link
-            href="/self-checkin"
-            className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" className="-ml-1 mr-2 h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v1m6 11h2m-6 0h-2m0 0H8m4 0h4m-4-8a3 3 0 100-6 3 3 0 000 6z" />
-            </svg>
-            Go to Self Check-in
-          </Link>
-        </div>
-      </div>
     </div>
+  );
+}
+
+export default function MemberAttendancePage() {
+  return (
+    <ProtectedRoute>
+      <MemberLayout>
+        <MemberAttendanceContent />
+      </MemberLayout>
+    </ProtectedRoute>
   );
 }

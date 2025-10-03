@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getSupabaseClient } from "../../../lib/supabase";
+import { apiClient } from "../../../lib/api-client";
 
 export async function POST(req: NextRequest) {
   try {
@@ -9,40 +9,24 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Email is required" }, { status: 400 });
     }
 
-    // Get Supabase client
-    const supabase = getSupabaseClient();
+    // Call Node.js API to check member
+    const response = await apiClient.checkMember(email);
 
-    // Get member by email
-    const { data: member, error } = await supabase
-      .from("members")
-      .select("id, email, password_hash")
-      .eq("email", email)
-      .single();
-
-    if (error || !member) {
-      return NextResponse.json({ error: "Member not found" }, { status: 404 });
-    }
-
-    // Check if password is set
-    if (!member.password_hash) {
+    if (!response.success) {
       return NextResponse.json(
-        {
-          error: "Password not set for this account",
-          memberId: member.id,
-          email: member.email,
-          needsPasswordSetup: true,
-        },
-        { status: 401 }
+        { error: response.error?.message || "Member not found" },
+        { status: 404 }
       );
     }
 
     // Return success
     return NextResponse.json({
       success: true,
-      memberId: member.id,
-      hasPassword: true,
+      memberId: response.data.memberId,
+      hasPassword: response.data.hasPassword,
     });
   } catch (error) {
+    console.error("Check member error:", error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

@@ -15,6 +15,22 @@ const nextConfig = {
     ignoreDuringBuilds: true,
   },
   output: 'standalone',
+  // Disable static generation to prevent navigator/window issues during build
+  experimental: {
+    forceSwcTransforms: true,
+  },
+  async rewrites() {
+    return [
+      {
+        source: '/api/:path*',
+        destination: `${process.env.API_URL || 'http://localhost:3001'}/api/:path*`,
+      },
+      {
+        source: '/uploads/:path*',
+        destination: `${process.env.API_URL || 'http://localhost:3001'}/uploads/:path*`,
+      },
+    ]
+  },
 }
 
 module.exports = nextConfig

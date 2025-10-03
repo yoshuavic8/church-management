@@ -1,325 +1,487 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { getSupabaseClient } from '../../lib/supabase';
-import Header from '../../components/Header';
+import Layout from '../../components/layout/Layout';
+import { apiClient } from '../../lib/api-client';
+import ProtectedRoute from '../../components/ProtectedRoute';
+import { useAuth } from '../../contexts/AuthContext';
+import AddMemberToCellGroupModal from '../../components/AddMemberToCellGroupModal';
 
+// Force dynamic rendering
+export const dynamic = 'force-dynamic';
+
+// Define types
 type CellGroup = {
   id: string;
   name: string;
-  meeting_day: string;
-  meeting_time: string;
-  meeting_location: string;
-  district_id: string;
-  district: {
+  description?: string;
+  district_id?: string;
+  leader_id?: string;
+  leader?: {
+    id: string;
+    first_name: string;
+    last_name: string;
+    email: string;
+    phone?: string;
+  };
+  assistant_leader_id?: string;
+  assistant_leader?: {
+    id: string;
+    first_name: string;
+    last_name: string;
+    email: string;
+    phone?: string;
+  };
+  district?: {
+    id: string;
     name: string;
   };
-  status: string;
-};
-
-type Leader = {
-  id: string;
-  first_name: string;
-  last_name: string;
-  email: string;
-  phone: string;
+  meeting_day?: string;
+  meeting_time?: string;
+  meeting_location?: string;
+  status: 'active' | 'inactive';
+  created_at: string;
+  updated_at: string;
+  members?: Member[];
+  cell_group_members?: Array<{
+    id: string;
+    joined_date: string;
+    status: string;
+    member: {
+      id: string;
+      first_name: string;
+      last_name: string;
+      email: string;
+      phone?: string;
+      status: string;
+      join_date?: string;
+    };
+  }>;
 };
 
 type Member = {
   id: string;
   first_name: string;
   last_name: string;
+  email: string;
+  phone?: string;
+  status: string;
+  join_date: string;
 };
 
-export default function CellGroupDetailPage() {
-  const { id } = useParams();
+// Client-side component for cell group details
+function CellGroupDetailContent() {
+  const { user } = useAuth();
+  const params = useParams();
   const router = useRouter();
+  const cellGroupId = params.id as string;
+
   const [cellGroup, setCellGroup] = useState<CellGroup | null>(null);
-  const [leaders, setLeaders] = useState<Leader[]>([]);
   const [members, setMembers] = useState<Member[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [addMemberModalOpen, setAddMemberModalOpen] = useState(false);
 
   useEffect(() => {
-    const fetchCellGroup = async () => {
+    const fetchCellGroupData = async () => {
       try {
-        const supabase = getSupabaseClient();
+        setLoading(true);
 
-        // Fetch cell group with district information
-        const { data: cellGroupData, error: cellGroupError } = await supabase
-          .from('cell_groups')
-          .select(`
-            id,
-            name,
-            meeting_day,
-            meeting_time,
-            meeting_location,
-            district_id,
-            status,
-            district:district_id (name)
-          `)
-          .eq('id', id)
-          .single();
+        if (!user) {
+          throw new Error('Authentication required. Please login.');
+        }
 
-        if (cellGroupError) throw cellGroupError;
+        // Fetch cell group details
+        const cellGroupResponse = await apiClient.getCellGroup(cellGroupId);
+        if (!cellGroupResponse.success) {
+          throw new Error(cellGroupResponse.error?.message || 'Failed to fetch cell group');
+        }
 
-        // Fix the district property if it's an array
-        const processedCellGroup = {
-          ...cellGroupData,
-          district: Array.isArray(cellGroupData.district)
-            ? cellGroupData.district[0]
-            : cellGroupData.district
-        };
+        setCellGroup(cellGroupResponse.data);
 
-        setCellGroup(processedCellGroup);
+        // Extract members from cell group data
+        if (cellGroupResponse.data.cell_group_members && Array.isArray(cellGroupResponse.data.cell_group_members)) {
+          const transformedMembers = cellGroupResponse.data.cell_group_members.map((item: any) => ({
+            id: item.member.id,
+            first_name: item.member.first_name,
+            last_name: item.member.last_name,
+            email: item.member.email,
+            phone: item.member.phone,
+            status: item.member.status,
+            join_date: item.joined_date
+          }));
+          setMembers(transformedMembers);
+        }
 
-        // Fetch leaders
-        const { data: leadersData, error: leadersError } = await supabase
-          .from('cell_group_leaders')
-          .select(`
-            member_id,
-            members:member_id (
-              id,
-              first_name,
-              last_name,
-              email,
-              phone
-            )
-          `)
-          .eq('cell_group_id', id);
-
-        if (leadersError) throw leadersError;
-
-        // Extract and process member data from the nested structure
-        const processedLeaders = (leadersData || []).map(item => {
-          // Handle if item.members is an array or an object
-          const memberData = Array.isArray(item.members) ? item.members[0] : item.members;
-          return {
-            id: memberData.id,
-            first_name: memberData.first_name,
-            last_name: memberData.last_name,
-            email: memberData.email,
-            phone: memberData.phone
-          } as Leader;
-        });
-
-        setLeaders(processedLeaders);
-
-        // Fetch members (excluding leaders)
-        const { data: membersData, error: membersError } = await supabase
-          .from('cell_group_members')
-          .select(`
-            member_id,
-            members:member_id (
-              id,
-              first_name,
-              last_name
-            )
-          `)
-          .eq('cell_group_id', id);
-
-        if (membersError) throw membersError;
-
-        // Extract and process member data from the nested structure
-        const processedMembers = (membersData || []).map(item => {
-          // Handle if item.members is an array or an object
-          const memberData = Array.isArray(item.members) ? item.members[0] : item.members;
-          return {
-            id: memberData.id,
-            first_name: memberData.first_name,
-            last_name: memberData.last_name
-          } as Member;
-        });
-
-        // Filter out leaders from the members list
-        const leaderIds = new Set(processedLeaders.map(leader => leader.id));
-        const filteredMembers = processedMembers.filter(member => !leaderIds.has(member.id));
-
-        setMembers(filteredMembers);
+        setLoading(false);
       } catch (error: any) {
-
         setError(error.message || 'Failed to fetch cell group data');
-      } finally {
         setLoading(false);
       }
     };
 
-    fetchCellGroup();
-  }, [id]);
+    if (user && cellGroupId) {
+      fetchCellGroupData();
+    }
+  }, [user, cellGroupId]);
+
+  const handleAddMemberSuccess = () => {
+    // Refresh the cell group data
+    if (user && cellGroupId) {
+      const fetchCellGroupData = async () => {
+        try {
+          const cellGroupResponse = await apiClient.getCellGroup(cellGroupId);
+          if (cellGroupResponse.success) {
+            setCellGroup(cellGroupResponse.data);
+            
+            if (cellGroupResponse.data.cell_group_members && Array.isArray(cellGroupResponse.data.cell_group_members)) {
+              const transformedMembers = cellGroupResponse.data.cell_group_members.map((item: any) => ({
+                id: item.member.id,
+                first_name: item.member.first_name,
+                last_name: item.member.last_name,
+                email: item.member.email,
+                phone: item.member.phone,
+                status: item.member.status,
+                join_date: item.joined_date
+              }));
+              setMembers(transformedMembers);
+            }
+          }
+        } catch (error) {
+          console.error('Error refreshing cell group data:', error);
+        }
+      };
+      
+      fetchCellGroupData();
+    }
+  };
+
+  const handleRemoveMember = async (memberId: string, memberName: string) => {
+    if (!cellGroup || !user) return;
+    
+    if (!confirm(`Are you sure you want to remove ${memberName} from ${cellGroup.name}?`)) {
+      return;
+    }
+
+    try {
+      const response = await apiClient.removeMemberFromCellGroup(cellGroup.id, memberId);
+      
+      if (!response.success) {
+        throw new Error(response.error?.message || 'Failed to remove member');
+      }
+
+      alert(`${memberName} has been removed from ${cellGroup.name} successfully.`);
+      handleAddMemberSuccess(); // Refresh data
+    } catch (error: any) {
+      console.error('Error removing member:', error);
+      alert(error.message || 'Failed to remove member from cell group');
+    }
+  };
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading cell group...</p>
+        </div>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
-        {error}
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+            <p className="font-bold">Error loading cell group</p>
+            <p className="text-sm">{error}</p>
+          </div>
+          <Link 
+            href="/cell-groups"
+            className="mt-4 inline-block bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700"
+          >
+            Back to Cell Groups
+          </Link>
+        </div>
       </div>
     );
   }
 
   if (!cellGroup) {
     return (
-      <div className="bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded mb-4">
-        Cell group not found
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded">
+            <p className="font-bold">Cell group not found</p>
+            <p className="text-sm">The requested cell group could not be found.</p>
+          </div>
+          <Link 
+            href="/cell-groups"
+            className="mt-4 inline-block bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700"
+          >
+            Back to Cell Groups
+          </Link>
+        </div>
       </div>
     );
   }
 
-  const formatTime = (timeString: string) => {
-    if (!timeString) return 'Not set';
-    try {
-      const [hours, minutes] = timeString.split(':');
-      const time = new Date();
-      time.setHours(parseInt(hours, 10));
-      time.setMinutes(parseInt(minutes, 10));
-      return time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    } catch (e) {
-      return timeString;
-    }
-  };
-
-  // Define the action buttons for the header
-  const actionButtons = (
-    <Link href={`/cell-groups/edit/${cellGroup.id}`} className="btn-secondary">
-      Edit
-    </Link>
-  );
-
   return (
-    <div>
-      <Header
-        title="Cell Group Details"
-        actions={actionButtons}
-        backTo="/cell-groups"
-        backLabel="Cell Groups List"
-      />
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2">
-          <div className="card">
-            <h2 className="text-xl font-semibold mb-4">{cellGroup.name}</h2>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <h3 className="text-sm font-medium text-gray-500">District</h3>
-                <p className="mt-1">
-                  <Link href={`/districts/${cellGroup.district_id}`} className="text-primary hover:underline">
-                    {cellGroup.district?.name || 'Unknown District'}
-                  </Link>
-                </p>
-              </div>
-
-              <div>
-                <h3 className="text-sm font-medium text-gray-500">Status</h3>
-                <p className="mt-1">
-                  <span className={`px-2 py-1 rounded-full text-xs ${
-                    cellGroup.status === 'active'
-                      ? 'bg-green-100 text-green-800'
-                      : 'bg-red-100 text-red-800'
-                  }`}>
-                    {cellGroup.status.charAt(0).toUpperCase() + cellGroup.status.slice(1)}
-                  </span>
-                </p>
-              </div>
-
-              <div>
-                <h3 className="text-sm font-medium text-gray-500">Meeting Day</h3>
-                <p className="mt-1">{cellGroup.meeting_day || 'Not set'}</p>
-              </div>
-
-              <div>
-                <h3 className="text-sm font-medium text-gray-500">Meeting Time</h3>
-                <p className="mt-1">{formatTime(cellGroup.meeting_time)}</p>
-              </div>
-
-              <div className="md:col-span-2">
-                <h3 className="text-sm font-medium text-gray-500">Location</h3>
-                <p className="mt-1">{cellGroup.meeting_location || 'Not set'}</p>
-              </div>
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="bg-white shadow rounded-lg p-6">
+        <div className="flex justify-between items-start">
+          <div>
+            <div className="flex items-center space-x-3">
+              <Link
+                href="/cell-groups"
+                className="text-gray-500 hover:text-gray-700"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                </svg>
+              </Link>
+              <h1 className="text-2xl font-bold text-gray-900">{cellGroup.name}</h1>
+              <span
+                className={`px-2 py-1 text-xs font-medium rounded-full ${
+                  cellGroup.status === 'active'
+                    ? 'bg-green-100 text-green-800'
+                    : 'bg-gray-100 text-gray-800'
+                }`}
+              >
+                {cellGroup.status}
+              </span>
             </div>
-          </div>
-
-          <div className="card mt-6">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-semibold">Leaders</h2>
-            </div>
-
-            {leaders.length === 0 ? (
-              <p className="text-gray-500">No leaders assigned yet.</p>
-            ) : (
-              <div className="space-y-4">
-                {leaders.map(leader => (
-                  <div key={leader.id} className="p-4 bg-gray-50 rounded-lg">
-                    <div className="flex justify-between">
-                      <h3 className="font-medium">
-                        <Link href={`/members/${leader.id}`} className="text-primary hover:underline">
-                          {leader.first_name} {leader.last_name}
-                        </Link>
-                      </h3>
-                    </div>
-                    <p className="text-sm text-gray-600 mt-1">{leader.email}</p>
-                    <p className="text-sm text-gray-600">{leader.phone}</p>
-                  </div>
-                ))}
-              </div>
+            {cellGroup.description && (
+              <p className="text-gray-600 mt-2">{cellGroup.description}</p>
             )}
           </div>
+          <Link
+            href={`/cell-groups/${cellGroup.id}/edit`}
+            className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors"
+          >
+            Edit Cell Group
+          </Link>
         </div>
+      </div>
 
-        <div className="lg:col-span-1">
-          <div className="card">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-semibold">Members ({members.length})</h2>
-              <Link href={`/cell-groups/${cellGroup.id}/members`} className="text-primary hover:underline text-sm">
-                Manage Members
-              </Link>
-            </div>
-
-            {members.length === 0 ? (
-              <p className="text-gray-500">No members in this cell group yet.</p>
-            ) : (
-              <div className="space-y-2">
-                {members.map(member => (
-                  <div key={member.id} className="flex justify-between items-center p-2 hover:bg-gray-50 rounded">
-                    <Link href={`/members/${member.id}`} className="text-primary hover:underline">
-                      {member.first_name} {member.last_name}
-                    </Link>
-                  </div>
-                ))}
-
-                {members.length > 10 && (
-                  <Link href={`/cell-groups/${cellGroup.id}/members`} className="text-primary hover:underline block text-center mt-4">
-                    View All Members
-                  </Link>
+      {/* Cell Group Info */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Basic Information */}
+        <div className="bg-white shadow rounded-lg p-6">
+          <h2 className="text-lg font-medium text-gray-900 mb-4">Basic Information</h2>
+          <div className="space-y-3">
+            {cellGroup.leader && (
+              <div>
+                <label className="text-sm font-medium text-gray-500">Leader</label>
+                <p className="text-sm text-gray-900">
+                  {cellGroup.leader.first_name} {cellGroup.leader.last_name}
+                </p>
+                <p className="text-sm text-gray-600">{cellGroup.leader.email}</p>
+                {cellGroup.leader.phone && (
+                  <p className="text-sm text-gray-600">{cellGroup.leader.phone}</p>
                 )}
               </div>
             )}
-          </div>
 
-          <div className="card mt-6">
-            <h2 className="text-xl font-semibold mb-4">Actions</h2>
-            <div className="space-y-2">
-              <Link href={`/cell-groups/${cellGroup.id}/members`} className="text-primary hover:underline block">
-                Manage Members
-              </Link>
-              <Link href={`/cell-groups/edit/${cellGroup.id}`} className="text-primary hover:underline block">
-                Edit Cell Group
-              </Link>
-              <Link href={`/attendance/record?cell_group=${cellGroup.id}`} className="text-primary hover:underline block">
-                Record Attendance
-              </Link>
+            {cellGroup.assistant_leader && (
+              <div>
+                <label className="text-sm font-medium text-gray-500">Assistant Leader</label>
+                <p className="text-sm text-gray-900">
+                  {cellGroup.assistant_leader.first_name} {cellGroup.assistant_leader.last_name}
+                </p>
+                <p className="text-sm text-gray-600">{cellGroup.assistant_leader.email}</p>
+                {cellGroup.assistant_leader.phone && (
+                  <p className="text-sm text-gray-600">{cellGroup.assistant_leader.phone}</p>
+                )}
+              </div>
+            )}
+
+            {cellGroup.district && (
+              <div>
+                <label className="text-sm font-medium text-gray-500">District</label>
+                <p className="text-sm text-gray-900">{cellGroup.district.name}</p>
+              </div>
+            )}
+
+            <div>
+              <label className="text-sm font-medium text-gray-500">Status</label>
+              <p className="text-sm text-gray-900 capitalize">{cellGroup.status}</p>
             </div>
           </div>
         </div>
+
+        {/* Meeting Information */}
+        <div className="bg-white shadow rounded-lg p-6">
+          <h2 className="text-lg font-medium text-gray-900 mb-4">Meeting Information</h2>
+          <div className="space-y-3">
+            {cellGroup.meeting_day && (
+              <div>
+                <label className="text-sm font-medium text-gray-500">Meeting Day</label>
+                <p className="text-sm text-gray-900">{cellGroup.meeting_day}</p>
+              </div>
+            )}
+
+            {cellGroup.meeting_time && (
+              <div>
+                <label className="text-sm font-medium text-gray-500">Meeting Time</label>
+                <p className="text-sm text-gray-900">{cellGroup.meeting_time}</p>
+              </div>
+            )}
+
+            {cellGroup.meeting_location && (
+              <div>
+                <label className="text-sm font-medium text-gray-500">Meeting Location</label>
+                <p className="text-sm text-gray-900">{cellGroup.meeting_location}</p>
+              </div>
+            )}
+
+            {!cellGroup.meeting_day && !cellGroup.meeting_time && !cellGroup.meeting_location && (
+              <p className="text-sm text-gray-500">No meeting information available</p>
+            )}
+          </div>
+        </div>
       </div>
+
+      {/* Members Section */}
+      <div className="bg-white shadow rounded-lg p-6">
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-lg font-medium text-gray-900">
+            Members ({members.length || 0})
+          </h2>
+          <button
+            className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md text-sm font-medium"
+            onClick={() => setAddMemberModalOpen(true)}
+          >
+            Add Member
+          </button>
+        </div>
+
+        {(!members || members.length === 0) ? (
+          <div className="text-center py-12">
+            <svg
+              className="mx-auto h-12 w-12 text-gray-400"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"
+              />
+            </svg>
+            <h3 className="mt-2 text-sm font-medium text-gray-900">No members</h3>
+            <p className="mt-1 text-sm text-gray-500">
+              Get started by adding members to this cell group.
+            </p>
+          </div>
+        ) : (
+          <div className="overflow-hidden">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Name
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Email
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Phone
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Join Date
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Status
+                  </th>
+                  <th className="relative px-6 py-3">
+                    <span className="sr-only">Actions</span>
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {members?.map((member) => (
+                  <tr key={member.id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm font-medium text-gray-900">
+                        {member.first_name} {member.last_name}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-900">{member.email || '-'}</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-900">{member.phone || '-'}</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-900">
+                        {new Date(member.join_date).toLocaleDateString('id-ID', {
+                          year: 'numeric',
+                          month: 'short',
+                          day: 'numeric'
+                        })}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                        member.status === 'active' 
+                          ? 'bg-green-100 text-green-800' 
+                          : 'bg-gray-100 text-gray-800'
+                      }`}>
+                        {member.status}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                      <div className="flex space-x-2">
+                        <Link
+                          href={`/members/${member.id}`}
+                          className="text-indigo-600 hover:text-indigo-900"
+                        >
+                          View
+                        </Link>
+                        <button
+                          onClick={() => handleRemoveMember(member.id, `${member.first_name} ${member.last_name}`)}
+                          className="text-red-600 hover:text-red-900"
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {/* Add Member Modal */}
+      {cellGroup && (
+        <AddMemberToCellGroupModal
+          isOpen={addMemberModalOpen}
+          onClose={() => setAddMemberModalOpen(false)}
+          onSuccess={handleAddMemberSuccess}
+          cellGroupId={cellGroup.id}
+          cellGroupName={cellGroup.name}
+          currentMemberIds={members.map(m => m.id)}
+        />
+      )}
     </div>
+  );
+}
+
+export default function CellGroupDetailPage() {
+  return (
+    <ProtectedRoute>
+      <Layout>
+        <CellGroupDetailContent />
+      </Layout>
+    </ProtectedRoute>
   );
 }

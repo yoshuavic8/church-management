@@ -2,7 +2,7 @@
 
 import { useParams, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { getSupabaseClient } from '../../../lib/supabase';
+import { apiClient } from '../../../lib/api-client';
 import DistrictForm from '../../../components/DistrictForm';
 import Header from '../../../components/Header';
 
@@ -15,6 +15,20 @@ type District = {
   status: string;
   created_at: string;
   updated_at: string;
+  leader1?: {
+    id: string;
+    first_name: string;
+    last_name: string;
+    email: string;
+    phone: string;
+  } | null;
+  leader2?: {
+    id: string;
+    first_name: string;
+    last_name: string;
+    email: string;
+    phone: string;
+  } | null;
 };
 
 type DistrictFormData = {
@@ -35,15 +49,13 @@ export default function EditDistrictPage() {
   useEffect(() => {
     const fetchDistrict = async () => {
       try {
-        const supabase = getSupabaseClient();
-        const { data, error } = await supabase
-          .from('districts')
-          .select('*')
-          .eq('id', id as string)
-          .single();
-
-        if (error) throw error;
-        setDistrict(data);
+        const response = await apiClient.getDistrict(id as string);
+        
+        if (!response.success) {
+          throw new Error(response.error?.message || 'Failed to fetch district');
+        }
+        
+        setDistrict(response.data);
       } catch (err: unknown) {
         setError(err instanceof Error ? err.message : 'An unknown error occurred');
       } finally {
@@ -51,7 +63,9 @@ export default function EditDistrictPage() {
       }
     };
 
-    fetchDistrict();
+    if (id) {
+      fetchDistrict();
+    }
   }, [id]);
 
   if (loading) {
@@ -73,8 +87,8 @@ export default function EditDistrictPage() {
   const formData: DistrictFormData | undefined = district ? {
     id: district.id,
     name: district.name,
-    leader1_id: district.leader1_id || undefined,
-    leader2_id: district.leader2_id || undefined,
+    leader1_id: district.leader1?.id || district.leader1_id || undefined,
+    leader2_id: district.leader2?.id || district.leader2_id || undefined,
     status: district.status
   } : undefined;
 

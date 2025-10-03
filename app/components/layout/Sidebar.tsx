@@ -216,6 +216,39 @@ const Sidebar = ({
                 </Link>
               </li>
 
+              {/* Ministries */}
+              <li>
+                <Link
+                  href="/ministries"
+                  className={`menu-item group ${
+                    pathname.includes('/ministries')
+                      ? 'menu-item-active'
+                      : 'menu-item-inactive'
+                  }`}
+
+                >
+                  <svg
+                    className={`h-5 w-5 ${
+                      pathname.includes('/ministries')
+                        ? 'menu-item-icon-active'
+                        : 'menu-item-icon-inactive'
+                    }`}
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"
+                    />
+                  </svg>
+                  <span className={`${!sidebarExpanded && 'hidden'}`}>Ministries</span>
+                </Link>
+              </li>
+
               {/* Districts */}
               <li>
                 <Link
@@ -282,19 +315,19 @@ const Sidebar = ({
                 </Link>
               </li>
 
-              {/* Ministries */}
+              {/* Projects */}
               <li>
                 <Link
-                  href="/ministries"
+                  href="/admin/projects"
                   className={`menu-item group ${
-                    pathname.includes('/ministries')
+                    pathname.includes('/admin/projects')
                       ? 'menu-item-active'
                       : 'menu-item-inactive'
                   }`}
                 >
                   <svg
                     className={`h-5 w-5 ${
-                      pathname.includes('/ministries')
+                      pathname.includes('/admin/projects')
                         ? 'menu-item-icon-active'
                         : 'menu-item-icon-inactive'
                     }`}
@@ -307,10 +340,10 @@ const Sidebar = ({
                       strokeLinecap="round"
                       strokeLinejoin="round"
                       strokeWidth={2}
-                      d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+                      d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
                     />
                   </svg>
-                  <span className={`${!sidebarExpanded && 'hidden'}`}>Ministries</span>
+                  <span className={`${!sidebarExpanded && 'hidden'}`}>Projects</span>
                 </Link>
               </li>
 
@@ -343,6 +376,70 @@ const Sidebar = ({
                     />
                   </svg>
                   <span className={`${!sidebarExpanded && 'hidden'}`}>Classes</span>
+                </Link>
+              </li>
+
+              {/* Articles */}
+              <li>
+                <Link
+                  href="/admin/articles"
+                  className={`menu-item group ${
+                    pathname.includes('/admin/articles')
+                      ? 'menu-item-active'
+                      : 'menu-item-inactive'
+                  }`}
+                >
+                  <svg
+                    className={`h-5 w-5 ${
+                      pathname.includes('/admin/articles')
+                        ? 'menu-item-icon-active'
+                        : 'menu-item-icon-inactive'
+                    }`}
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z"
+                    />
+                  </svg>
+                  <span className={`${!sidebarExpanded && 'hidden'}`}>Articles</span>
+                </Link>
+              </li>
+
+              {/* File Manager */}
+              <li>
+                <Link
+                  href="/admin/file-management"
+                  className={`menu-item group ${
+                    pathname.includes('/admin/file-management')
+                      ? 'menu-item-active'
+                      : 'menu-item-inactive'
+                  }`}
+                >
+                  <svg
+                    className={`h-5 w-5 ${
+                      pathname.includes('/admin/file-management')
+                        ? 'menu-item-icon-active'
+                        : 'menu-item-icon-inactive'
+                    }`}
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"
+                    />
+                  </svg>
+                  <span className={`${!sidebarExpanded && 'hidden'}`}>File Management</span>
                 </Link>
               </li>
 
@@ -381,40 +478,6 @@ const Sidebar = ({
                     />
                   </svg>
                   <span className={`${!sidebarExpanded && 'hidden'}`}>Administration</span>
-                </Link>
-              </li>
-
-
-
-              {/* Scan */}
-              <li>
-                <Link
-                  href="/scan"
-                  className={`menu-item group ${
-                    pathname.includes('/scan')
-                      ? 'menu-item-active'
-                      : 'menu-item-inactive'
-                  }`}
-                >
-                  <svg
-                    className={`h-5 w-5 ${
-                      pathname.includes('/scan')
-                        ? 'menu-item-icon-active'
-                        : 'menu-item-icon-inactive'
-                    }`}
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                    xmlns="http://www.w3.org/2000/svg"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"
-                    />
-                  </svg>
-                  <span className={`${!sidebarExpanded && 'hidden'}`}>QR Scan</span>
                 </Link>
               </li>
             </ul>

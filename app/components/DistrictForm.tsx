@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { getSupabaseClient } from '../lib/supabase';
+import { apiClient } from '../lib/api-client';
 
 type Member = {
   id: string;
@@ -33,22 +33,29 @@ export default function DistrictForm({ initialData = {}, mode }: DistrictFormPro
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Update formData when initialData changes
+  useEffect(() => {
+    setFormData({
+      name: initialData.name || '',
+      leader1_id: initialData.leader1_id || '',
+      leader2_id: initialData.leader2_id || '',
+      status: initialData.status || 'active',
+    });
+  }, [initialData]);
+
   useEffect(() => {
     const fetchMembers = async () => {
       try {
-        const supabase = getSupabaseClient();
+        // Fetch members via API
+        const response = await apiClient.getMembers({ limit: 1000 });
 
-        // Fetch members
-        const { data, error } = await supabase
-          .from('members')
-          .select('id, first_name, last_name')
-          .order('last_name', { ascending: true });
+        if (!response.success) {
+          throw new Error(response.error?.message || 'Failed to load members');
+        }
 
-        if (error) throw error;
-
-        setMembers(data || []);
+        setMembers(response.data || []);
       } catch (error: any) {
-
+        console.error('Error fetching members:', error);
         setError(error.message || 'Failed to load members');
       }
     };
@@ -67,8 +74,6 @@ export default function DistrictForm({ initialData = {}, mode }: DistrictFormPro
     setError(null);
 
     try {
-      const supabase = getSupabaseClient();
-
       // Create a copy of formData with proper handling for empty leader IDs
       const dataToSubmit = {
         ...formData,
@@ -79,28 +84,24 @@ export default function DistrictForm({ initialData = {}, mode }: DistrictFormPro
 
       if (mode === 'add') {
         // Insert new district
-        const { error } = await supabase
-          .from('districts')
-          .insert([dataToSubmit]);
-
-        if (error) throw error;
-
-
+        const response = await apiClient.createDistrict(dataToSubmit);
+        
+        if (!response.success) {
+          throw new Error(response.error?.message || 'Failed to create district');
+        }
       } else {
         // Update existing district
-        const { error } = await supabase
-          .from('districts')
-          .update(dataToSubmit)
-          .eq('id', initialData.id!);
-
-        if (error) throw error;
-
-
+        const response = await apiClient.updateDistrict(initialData.id!, dataToSubmit);
+        
+        if (!response.success) {
+          throw new Error(response.error?.message || 'Failed to update district');
+        }
       }
 
       // Redirect to districts list
       router.push('/districts');
     } catch (error: any) {
+      console.error('District form error:', error);
       setError(error.message || 'An error occurred');
     } finally {
       setLoading(false);
